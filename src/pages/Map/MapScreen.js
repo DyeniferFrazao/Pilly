@@ -11,6 +11,7 @@ const MapScreen = ({ navigation }) => {
   const [search, setSearch] = useState('');
   const [selectedPharmacy, setSelectedPharmacy] = useState(null);
 
+  // TODO: Futuramente buscar farmácias da API em vez de hardcoded
   const pharmacies = [
     { name: 'Farmácia São João - São Cristóvão', coordinate: { latitude: -28.2629, longitude: -52.4064 }, rating: 4.5, address: 'Avenida Presidente Vargas, 1020', cep: '99070-000', phone: '(54) 3317-7070' },
     { name: 'Farmácia Panvel - Centro', coordinate: { latitude: -28.2635, longitude: -52.4050 }, rating: 4.8, address: 'Rua Morom, 285', cep: '99010-000', phone: '(54) 3314-1313' },
@@ -31,14 +32,16 @@ const MapScreen = ({ navigation }) => {
         setErrorMsg('Permission to access location was denied');
         return;
       }
-      let location = await Location.getCurrentPositionAsync({});
-      setLocation(location);
+      let currentLocation = await Location.getCurrentPositionAsync({});
+      setLocation(currentLocation);
     })();
   }, []);
 
   const handleSearch = (text) => {
     setSearch(text);
-    const pharmacy = pharmacies.find((pharmacy) => pharmacy.name.toLowerCase().includes(text.toLowerCase()));
+    const pharmacy = pharmacies.find((p) =>
+      p.name.toLowerCase().includes(text.toLowerCase())
+    );
     setSelectedPharmacy(pharmacy || null);
   };
 

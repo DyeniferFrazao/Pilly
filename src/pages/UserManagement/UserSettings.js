@@ -8,13 +8,13 @@ import {
   Platform,
   ScrollView,
   Alert,
-  StyleSheet,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { AntDesign, Feather, FontAwesome } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import InputComponent from '../../components/InputComponent';
 import styles from '../../style/styleusersettings';
+import { API_URL } from '../../config';
 
 const UserSettings = ({ navigation, route }) => {
   const { token, profileId } = route.params;
@@ -24,9 +24,8 @@ const UserSettings = ({ navigation, route }) => {
   const [name, setName] = useState(null);
 
   const getProfileImage = async (userId) => {
-    const apiIp = await AsyncStorage.getItem('apiIp');
     try {
-      const response = await fetch('https://' + apiIp + '/auth/' + userId.toString() + '/profile-image', {
+      const response = await fetch(`${API_URL}/auth/${userId}/profile-image`, {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -45,12 +44,11 @@ const UserSettings = ({ navigation, route }) => {
 
   const handleUploadImage = async () => {
     try {
-      const apiIp = await AsyncStorage.getItem('apiIp');
-      const token = await AsyncStorage.getItem('token');
-      const profileId = await AsyncStorage.getItem('profileId');
+      const storedToken = await AsyncStorage.getItem('token');
+      const storedProfileId = await AsyncStorage.getItem('profileId');
       const userId = await AsyncStorage.getItem('userId');
-      
-      if (!token || !profileId || !userId) {
+
+      if (!storedToken || !storedProfileId || !userId) {
         Alert.alert('Erro', 'Não foi possível obter as credenciais para upload.');
         return;
       }
@@ -74,22 +72,21 @@ const UserSettings = ({ navigation, route }) => {
         formData.append('file', {
           uri: Platform.OS === 'ios' ? uri.replace('file://', '') : uri,
           type: 'image/jpeg',
-          name: `profile_${profileId}.jpg`,
+          name: `profile_${storedProfileId}.jpg`,
         });
 
-        const response = await fetch(`https://${apiIp}/auth/${userId}/upload-image`, {
+        const response = await fetch(`${API_URL}/auth/${userId}/upload-image`, {
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${token}`,
-            'Active-Profile': profileId,
-            'file': 'multipart/form-data',
+            Authorization: `Bearer ${storedToken}`,
+            'Active-Profile': storedProfileId,
           },
           body: formData,
         });
 
         if (response.ok) {
           const message = await response.text();
-          navigation.navigate('UserSettings', { refresh: true });
+          setImage(uri); // Atualiza a imagem localmente
           Alert.alert('Sucesso', message);
         } else {
           const errorMessage = await response.text();
@@ -103,47 +100,57 @@ const UserSettings = ({ navigation, route }) => {
   };
 
   useEffect(() => {
-    const fetchUserProfileImage = async () => {
+    const fetchUserData = async () => {
       const userId = await AsyncStorage.getItem('userId');
+      const storedEmail = await AsyncStorage.getItem('email');
+      const storedName = await AsyncStorage.getItem('name');
+
       if (userId) {
         await getProfileImage(userId);
       }
-      const fetchEmail = async () => {
-        const storedEmail = await AsyncStorage.getItem('email');
-        setEmail(storedEmail);
-      };
-      fetchEmail();
-      const fetchName = async () => {
-        const storedName = await AsyncStorage.getItem('name');
-        setName(storedName);
-      };
-      fetchName();
+      setEmail(storedEmail);
+      setName(storedName);
     };
 
-    fetchUserProfileImage();
+    fetchUserData();
   }, [token]);
 
   const handleDeleteAccount = async () => {
-    const apiIp = await AsyncStorage.getItem('apiIp');
-    try {
-      const response = await fetch('http://' + apiIp + ':8080/auth/delete', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-          'Active-Profile': profileId,
-        },
-      });
+    Alert.alert(
+      'Confirmação',
+      'Tem certeza que deseja deletar sua conta? Esta ação não pode ser desfeita.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Deletar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const response = await fetch(`${API_URL}/auth/delete`, {
+                method: 'DELETE',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${token}`,
+                  'Active-Profile': profileId,
+                },
+              });
 
-      if (response.ok) {
-        Alert.alert('Sucesso', 'Usuário deletado com sucesso.');
-        navigation.navigate('Login'); 
-      } else {
-        Alert.alert('Erro');
-      }
-    } catch (error) {
-      Alert.alert('Erro', error.message);
-    }
+              if (response.ok) {
+                await AsyncStorage.multiRemove(['token', 'profileId', 'userId', 'email', 'name']);
+                Alert.alert('Sucesso', 'Usuário deletado com sucesso.');
+                navigation.navigate('Login');
+              } else {
+                const errorMessage = await response.text();
+                Alert.alert('Erro', errorMessage || 'Não foi possível deletar a conta.');
+              }
+            } catch (error) {
+              console.error('Erro ao deletar conta:', error);
+              Alert.alert('Erro', 'Não foi possível deletar a conta. Verifique sua conexão.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleLogout = async () => {
@@ -156,7 +163,7 @@ const UserSettings = ({ navigation, route }) => {
           text: 'OK',
           onPress: async () => {
             try {
-              await AsyncStorage.multiRemove(['token', 'profileId']);
+              await AsyncStorage.multiRemove(['token', 'profileId', 'name']);
               navigation.navigate('Login');
             } catch (error) {
               Alert.alert('Erro', 'Não foi possível realizar o logout.');
@@ -192,23 +199,15 @@ const UserSettings = ({ navigation, route }) => {
             </TouchableOpacity>
 
             <TouchableOpacity onPress={handleUploadImage} style={styles.uploadButtonInsideCard}>
-              <Text style={styles. uploadButtonText}>Editar Perfil</Text>
+              <Text style={styles.uploadButtonText}>Editar Perfil</Text>
             </TouchableOpacity>
           </View>
 
           <Text style={styles.label}>Email</Text>
-          {email ? (
-            <Text style={styles.label}>{email}</Text>
-          ) : (
-            <Text style={styles.label}>Carregando</Text>
-          )}
+          <Text style={styles.label}>{email || 'Carregando...'}</Text>
 
           <Text style={styles.label}>Perfil Ativo</Text>
-          {name ? (
-            <Text style={styles.label}>{name}</Text>
-          ) : (
-            <Text style={styles.label}>Carregando</Text>
-          )}
+          <Text style={styles.label}>{name || 'Carregando...'}</Text>
 
           <TouchableOpacity onPress={handleDeleteAccount} style={styles.deleteContainer}>
             <Feather name="delete" size={24} color="#60A2AE" />
@@ -226,7 +225,5 @@ const UserSettings = ({ navigation, route }) => {
     </KeyboardAvoidingView>
   );
 };
-
-
 
 export default UserSettings;

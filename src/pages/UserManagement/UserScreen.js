@@ -1,110 +1,53 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, Image, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import Card from '../../components/Card';
-import styles from '../../style/styleuser';
-import FooterNavigation from '../../components/FooterNavigation';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
-import { AntDesign } from 'react-native-vector-icons';
+import { AntDesign } from '@expo/vector-icons';
+import Card from '../../components/Card';
+import FooterNavigation from '../../components/FooterNavigation';
+import styles from '../../style/styleuser';
+import { useAuth } from '../../contexts/AuthContext';
+import { listarPerfis, excluirPerfil } from '../../services/profileService';
 
-const UserScreen = ({ route }) => {
+const UserScreen = () => {
   const navigation = useNavigation();
-  const { token } = route.params || {}; // Recebe apenas o token
-
-  const [profiles, setProfiles] = useState([]); // Inicializa o estado vazio
+  const { user } = useAuth();
+  const [perfis, setPerfis] = useState([]);
 
   useFocusEffect(
     React.useCallback(() => {
-      const fetchProfiles = async () => {
-        const apiIp = await AsyncStorage.getItem('apiIp');
-        try {
-          const response = await fetch('https://' + apiIp + '/profiles/select', {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-            },
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            const enrichedProfiles = data.map((profile) => ({
-              ...profile,
-              image: require('../../../assets/icons/Perfil.png'),
-              bio: `Perfil de ${profile.name}`,
-              medications: [],
-            }));
-            setProfiles(enrichedProfiles);
-          } else {
-            const errorMessage = await response.text();
-            Alert.alert('Erro', `Erro ao buscar perfis: ${errorMessage}`);
-          }
-        } catch (error) {
-          Alert.alert('Erro', 'Não foi possível carregar os perfis.');
-        }
-      };
-
-      fetchProfiles();
-    }, [token])
+      if (!user) return;
+      listarPerfis(user.id)
+        .then(setPerfis)
+        .catch(() => Alert.alert('Erro', 'Não foi possível carregar os perfis.'));
+    }, [user])
   );
 
-  // Função para excluir o perfil
-  const handleDeleteProfile = async (profileId) => {
-    try {
-      const apiIp = await AsyncStorage.getItem('apiIp');
-      const response = await fetch('https://' + apiIp + '/profiles/delete/' + profileId, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        setProfiles(profiles.filter(profile => profile.id !== profileId)); // Remove o perfil da lista
-        Alert.alert('Sucesso', 'Perfil excluído com sucesso!');
-      } else {
-        const errorMessage = await response.text();
-        Alert.alert('Erro', `Erro ao excluir o perfil: ${errorMessage}`);
-      }
-    } catch (error) {
-      Alert.alert('Erro', 'Não foi possível excluir o perfil.');
-    }
+  const handleSelectProfile = (perfil) => {
+    navigation.navigate('Home', { perfilId: perfil.id, perfilNome: perfil.nome });
   };
 
-  const selectProfile = async (profileId) => {
-    const apiIp = await AsyncStorage.getItem('apiIp');
-    try {
-      const response = await fetch('https://' + apiIp + '/profiles/select/' + (profileId.toString()), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+  const handleDelete = (perfilId) => {
+    Alert.alert('Confirmar', 'Excluir este perfil?', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Excluir',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await excluirPerfil(perfilId);
+            setPerfis(prev => prev.filter(p => p.id !== perfilId));
+          } catch {
+            Alert.alert('Erro', 'Não foi possível excluir o perfil.');
+          }
         },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        await AsyncStorage.setItem('profileId', profileId.toString());
-        await AsyncStorage.setItem('name', data.name);
-
-        navigation.navigate('Home', { token, profileId });
-      } else {
-        const errorMessage = await response.text();
-        console.error('Erro ao selecionar o perfil:', errorMessage);
-        Alert.alert('Erro', `Erro ao selecionar perfil: ${errorMessage}`);
-      }
-    } catch (error) {
-      console.error('Erro ao selecionar o perfil:', error);
-      Alert.alert('Erro', 'Não foi possível selecionar o perfil.');
-    }
+      },
+    ]);
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} />
         <Text style={styles.headerText}>Perfil</Text>
       </View>
 
@@ -113,29 +56,28 @@ const UserScreen = ({ route }) => {
       </View>
 
       <ScrollView contentContainerStyle={styles.cardContainer}>
-        {profiles.map((profile) => (
-          <View style={styles.cardSpacing} key={profile.id}>
+        {perfis.map((perfil) => (
+          <View style={styles.cardSpacing} key={perfil.id}>
             <Card>
-              <TouchableOpacity onPress={() => selectProfile(profile.id)}>
+              <TouchableOpacity onPress={() => handleSelectProfile(perfil)}>
                 <View style={styles.cardContent}>
                   <View style={styles.iconContainer}>
-                    <Image style={styles.profileImage} source={profile.image} />
-                    <Text style={styles.usernameText}>{profile.name}</Text>
+                    <Image
+                      style={styles.profileImage}
+                      source={
+                        perfil.foto_url
+                          ? { uri: perfil.foto_url }
+                          : require('../../../assets/icons/Perfil.png')
+                      }
+                    />
+                    <Text style={styles.usernameText}>{perfil.nome}</Text>
                   </View>
-                  <Text style={styles.bioText}>{profile.bio}</Text>
-                </View>
-                <View style={styles.medicationContainer}>
-                  {profile.medications.map((medication, index) => (
-                    <Text style={styles.medicationText} key={index}>
-                      {medication}
-                    </Text>
-                  ))}
+                  {perfil.bio ? <Text style={styles.bioText}>{perfil.bio}</Text> : null}
                 </View>
               </TouchableOpacity>
-              {/* Ícone de lixeira para excluir o perfil */}
               <TouchableOpacity
                 style={styles.deleteIcon}
-                onPress={() => handleDeleteProfile(profile.id)}
+                onPress={() => handleDelete(perfil.id)}
               >
                 <AntDesign name="delete" size={24} color="#60A2AE" />
               </TouchableOpacity>

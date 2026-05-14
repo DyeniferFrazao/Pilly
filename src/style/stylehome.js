@@ -69,7 +69,33 @@ const stylehome = StyleSheet.create({
     color: '#C25B8C',
     fontWeight: 'bold',
   },
- 
+  emptyListText: {
+    color: '#999',
+    marginTop: 40,
+    fontSize: 14,
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 80,
+    alignSelf: 'center',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#60A2AE',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  fabText: {
+    color: '#fff',
+    fontSize: 30,
+    lineHeight: 34,
+    fontWeight: 'bold',
+  },
 });
 
 export default stylehome;

@@ -1,147 +1,99 @@
 import React, { useState } from 'react';
-import { View, Image, Switch, Text, Alert } from 'react-native';
+import { View, Image, Switch, Text, Alert, ActivityIndicator } from 'react-native';
 import InputComponent from '../../components/InputComponent';
 import PrimaryButton from '../../components/PrimaryButton';
 import TransparentButton from '../../components/TransparentButton';
 import styles from '../../style/stylesignup';
-
+import { cadastrar } from '../../services/authService';
 
 const SignUpScreen = ({ navigation }) => {
   const [isChecked, setChecked] = useState(false);
-  const [name, setname] = useState('');
-  const [phone, setPhone] = useState('');
+  const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-
-  const toggleSwitch = () => setChecked((previousState) => !previousState);
+  const [senha, setSenha] = useState('');
+  const [confirmSenha, setConfirmSenha] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleCreateAccount = async () => {
-    const apiIp = await AsyncStorage.getItem('apiIp');
-    if (!name || !phone || !email || !password || !confirmPassword) {
-      Alert.alert("Erro", "Por favor, preencha todos os campos.");
+    if (!nome || !email || !senha || !confirmSenha) {
+      Alert.alert('Atenção', 'Preencha todos os campos.');
       return;
     }
-    if (password !== confirmPassword) {
-      Alert.alert("Erro", "As senhas não coincidem.");
+    if (senha !== confirmSenha) {
+      Alert.alert('Atenção', 'As senhas não conferem.');
       return;
     }
     if (!isChecked) {
-      Alert.alert("Erro", "Você precisa aceitar os termos de uso.");
+      Alert.alert('Atenção', 'Aceite os termos de uso para continuar.');
       return;
     }
-  
-    try {
-      const requestBody = {
-        email: email,
-        password: password,
-        name: name,
-      };
-  
-      const response = await fetch('https://'+ apiIp +'/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      });
-  
-      if (response.ok) {
-        try {
-          const data = await response.json(); // Tenta interpretar como JSON
-          Alert.alert("Sucesso", data?.message || "Conta criada com sucesso!");
-        } catch (error) {
-          // Caso a resposta seja vazia ou não seja JSON válido
-          console.warn("A resposta não é um JSON válido ou está vazia.", error);
-          Alert.alert("Sucesso", "Conta criada com sucesso!");
-        }
-        navigation.navigate('Login');
-      } else {
-        const errorData = await response.json() || String;
-        Alert.alert("Erro", errorData?.message || "Ocorreu um erro ao criar a conta.");
-      }
-    } catch (error) {
-      console.error("Erro ao criar conta:");
-      Alert.alert("Erro ao criar conta");
-    }
-  };
-  
 
-  const navigateToLogin = () => {
-    if (!isChecked) {
-      Alert.alert("Erro", "Você precisa aceitar os termos de uso.");
-      return;
+    setLoading(true);
+    try {
+      await cadastrar(nome, email.trim(), senha);
+      Alert.alert('Conta criada!', 'Verifique seu e-mail para confirmar o cadastro.');
+      navigation.navigate('Login');
+    } catch (error) {
+      Alert.alert('Erro ao cadastrar', error.message);
+    } finally {
+      setLoading(false);
     }
-    navigation.navigate('Login');
   };
 
   return (
     <View style={styles.container}>
-      <Image 
-        source={require('../../../assets/icons/icon.png')} 
-        style={styles.icon} 
-      />
-      
-      <InputComponent 
-        placeholder="Nome de Usuário" 
-        value={name} 
-        onChangeText={setname}
+      <Image source={require('../../../assets/icons/icon.png')} style={styles.icon} />
+
+      <InputComponent
+        placeholder="Nome completo"
+        value={nome}
+        onChangeText={setNome}
         style={{ marginBottom: 15 }}
-        width={312} 
+        width={312}
       />
-      <InputComponent 
-        placeholder="Telefone" 
-        keyboardType="phone-pad" 
-        value={phone} 
-        onChangeText={setPhone}
-        style={{ marginBottom: 15 }}
-        width={312} 
-      />
-      <InputComponent 
-        placeholder="E-mail" 
-        keyboardType="email-address" 
-        value={email} 
+      <InputComponent
+        placeholder="E-mail"
+        keyboardType="email-address"
+        autoCapitalize="none"
+        value={email}
         onChangeText={setEmail}
         style={{ marginBottom: 15 }}
-        width={312} 
+        width={312}
       />
-      <InputComponent 
-        placeholder="Senha" 
-        secureTextEntry={true} 
-        value={password} 
-        onChangeText={setPassword}
+      <InputComponent
+        placeholder="Senha"
+        secureTextEntry
+        value={senha}
+        onChangeText={setSenha}
         style={{ marginBottom: 15 }}
-        width={312} 
+        width={312}
       />
-      <InputComponent 
-        placeholder="Confirme a senha" 
-        secureTextEntry={true} 
-        value={confirmPassword} 
-        onChangeText={setConfirmPassword}
+      <InputComponent
+        placeholder="Confirmar senha"
+        secureTextEntry
+        value={confirmSenha}
+        onChangeText={setConfirmSenha}
         style={{ marginBottom: 15 }}
-        width={312} 
+        width={312}
       />
-      
+
       <View style={styles.switchContainer}>
-        <Switch 
-          value={isChecked} 
-          onValueChange={toggleSwitch} 
-          style={styles.switch} 
-        />
+        <Switch value={isChecked} onValueChange={setChecked} style={styles.switch} />
         <Text style={styles.switchLabelText}>Eu aceito os termos de uso</Text>
       </View>
-      
+
       <View style={styles.primaryButtonContainer}>
-        <PrimaryButton 
-          title="Confirmar" 
-          onPress={handleCreateAccount}
-        />
+        {loading ? (
+          <ActivityIndicator size="large" color="#60A2AE" />
+        ) : (
+          <PrimaryButton title="Confirmar" onPress={handleCreateAccount} />
+        )}
       </View>
-      
+
       <View style={styles.transparentButtonContainer}>
-        <TransparentButton 
-          title="Já tenho uma conta" 
-          onPress={navigateToLogin}
+        <TransparentButton
+          title="Já tenho uma conta"
+          onPress={() => navigation.navigate('Login')}
         />
       </View>
     </View>

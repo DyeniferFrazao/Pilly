@@ -1,8 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, FlatList, TouchableOpacity, Alert } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { useNavigation } from '@react-navigation/native';
-import * as Notifications from 'expo-notifications';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { scheduleAlarms } from '../../services/alarmService';
 import styles from '../../style/stylealarm';
 
 const AlarmScreen = () => {
@@ -12,44 +12,19 @@ const AlarmScreen = () => {
   const [showPicker, setShowPicker] = useState(false);
 
   const navigation = useNavigation();
+  const route = useRoute();
+  const { medicationId, medicationName } = route.params || {};
 
-  // Função otimizada de cálculos
-  const calculateNextAlarms = useCallback((baseTime, interval) => {
+  // Calcula os horários para exibição (sem agendar ainda)
+  const calculateNextAlarms = useCallback((baseTime, selectedInterval) => {
     const nextAlarms = [];
-    
     for (let i = 1; i <= 4; i++) {
       const nextTime = new Date(baseTime);
-      nextTime.setHours(baseTime.getHours() + interval * i);
-      nextAlarms.push(nextTime);
+      nextTime.setHours(baseTime.getHours() + selectedInterval * i);
+      nextAlarms.push(nextTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
     }
-
-    const formattedAlarms = nextAlarms.map((time) =>
-      time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    );
-
-    setAlarms(formattedAlarms);
-    scheduleNotifications(nextAlarms);
+    setAlarms(nextAlarms);
   }, []);
-
-  // Função para agendar as notificações
-  const scheduleNotifications = (alarmTimes) => {
-    alarmTimes.forEach((time, index) => {
-      const trigger = new Date(time);
-      Notifications.scheduleNotificationAsync({
-        content: {
-          title: 'Lembrete de Medicamento',
-          body: `Hora de tomar seu remédio. Alarme ${index + 1}`,
-          sound: true,
-        },
-        trigger,
-      }).then(() => {
-        console.log(`Alarme ${index + 1} agendado para: ${trigger.toLocaleTimeString()}`);
-      }).catch((error) => {
-        console.error('Erro ao agendar notificação:', error);
-        Alert.alert('Erro', 'Não foi possível agendar o alarme.');
-      });
-    });
-  };
 
   const handleTimeChange = (event, time) => {
     setShowPicker(false);
@@ -68,11 +43,16 @@ const AlarmScreen = () => {
     navigation.goBack();
   };
 
-  // Função que salva e navega para a tela de notificações
-  const handleCalculateAlarms = () => {
-    Alert.alert('Alarmes Agendados');
-    // Navegar para a tela de notificações e passar os horários calculados
-    navigation.navigate('Notification', { alarms });  // Passando os horários para a tela de Notificação
+  // Agenda os alarmes via alarmService (vinculados ao medicationId) e navega
+  const handleCalculateAlarms = async () => {
+    try {
+      const scheduled = await scheduleAlarms(selectedTime, interval, medicationName || 'Medicamento', medicationId);
+      Alert.alert('Alarmes Agendados', `Próximos horários:\n${scheduled.join('\n')}`);
+      navigation.navigate('Notification', { alarms: scheduled });
+    } catch (error) {
+      console.error('Erro ao agendar alarmes:', error);
+      Alert.alert('Erro', 'Não foi possível agendar os alarmes.');
+    }
   };
 
   return (

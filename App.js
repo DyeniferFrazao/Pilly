@@ -1,39 +1,37 @@
 import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
+import { Alert } from 'react-native';
+import { AuthProvider } from './src/contexts/AuthContext';
 import StackNavigator from './src/routes/StackNavigator';
-import { Platform, Alert } from 'react-native';
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
 const App = () => {
-  // Configurar o comportamento das notificações
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowAlert: true,
-      shouldPlaySound: true,
-      shouldSetBadge: false,
-    }),
-  });
-
-  // Função para solicitar permissão de notificações
-  const requestNotificationPermission = async () => {
-    const { status } = await Notifications.getPermissionsAsync();
-    if (status !== 'granted') {
-      const { status: newStatus } = await Notifications.requestPermissionsAsync();
-      if (newStatus !== 'granted') {
-        Alert.alert('Permissão Negada', 'O aplicativo precisa de permissão para enviar notificações.');
-      }
-    }
-  };
-
-  // Solicitar permissão ao iniciar o app
   useEffect(() => {
-    requestNotificationPermission();
+    (async () => {
+      const { status } = await Notifications.getPermissionsAsync();
+      if (status !== 'granted') {
+        const { status: novo } = await Notifications.requestPermissionsAsync();
+        if (novo !== 'granted') {
+          Alert.alert('Permissão Negada', 'O app precisa de permissão para enviar notificações.');
+        }
+      }
+    })();
   }, []);
 
   return (
-    <NavigationContainer>
-      <StackNavigator />
-    </NavigationContainer>
+    <AuthProvider>
+      <NavigationContainer>
+        <StackNavigator />
+      </NavigationContainer>
+    </AuthProvider>
   );
 };
 

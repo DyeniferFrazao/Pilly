@@ -1,81 +1,54 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, Image, Alert } from 'react-native';
-import stylehome from '../../style/stylehome'; 
-import Card from '../../components/Card'; 
-import FooterNavigation from '../../components/FooterNavigation'; 
-import ModalComponent from '../../components/ModalComponent'; 
+import React, { useState, useCallback } from 'react';
+import { View, Text, ScrollView, Image, Alert, TouchableOpacity } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import stylehome from '../../style/stylehome';
+import Card from '../../components/Card';
+import FooterNavigation from '../../components/FooterNavigation';
+import ModalComponent from '../../components/ModalComponent';
+import { useAuth } from '../../contexts/AuthContext';
+import { listarMedicamentos, removerMedicamento } from '../../services/medicService';
+import { cancelAlarmsForMedication } from '../../services/alarmService';
 
-import { useFocusEffect } from '@react-navigation/native'; 
-import AsyncStorage from '@react-native-async-storage/async-storage';
+const diasDesde = (dateStr) => {
+  if (!dateStr) return null;
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const dias = Math.floor(diff / (1000 * 60 * 60 * 24));
+  if (dias < 30) return `${dias}d`;
+  const meses = Math.floor(dias / 30);
+  const restoDias = dias % 30;
+  return restoDias > 0 ? `${meses}m e ${restoDias}d` : `${meses}m`;
+};
 
 const HomeScreen = ({ navigation, route }) => {
-  const [token, setToken] = useState(null);
-  const [profileId, setProfileId] = useState(null);
+  const { user } = useAuth();
+  const perfilId = route.params?.perfilId ?? null;
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedMedication, setSelectedMedication] = useState(null);
   const [medications, setMedications] = useState([]);
 
-  // Função para buscar os medicamentos da API
-  const fetchMedications = async () => {
-    const apiIp = await AsyncStorage.getItem('apiIp');
+  const fetchMedications = useCallback(async () => {
+    if (!user) return;
     try {
-      const response = await fetch('https://' + apiIp + '/medicamento/list', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          'Active-Profile': profileId, 
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json(); 
-        setMedications(data); 
-      } else {
-        const errorMessage = await response.text();
-        console.error('Erro ao buscar medicamentos:', errorMessage);
-        Alert.alert('Erro', `Erro ao buscar medicamentos: ${errorMessage}`);
-      }
+      const data = await listarMedicamentos(perfilId ?? user.id);
+      setMedications(data);
     } catch (error) {
-      console.error('Erro ao buscar medicamentos:', error);
       Alert.alert('Erro', 'Não foi possível carregar os medicamentos.');
     }
-  };
+  }, [user, perfilId]);
 
-  // Lê os dados do AsyncStorage ao entrar na tela
   useFocusEffect(
-    React.useCallback(() => {
-      const getTokenAndProfileId = async () => {
-        const storedToken = await AsyncStorage.getItem('token');
-        const storedProfileId = await AsyncStorage.getItem('profileId');
-        if (storedToken && storedProfileId) {
-          setToken(storedToken);
-          setProfileId(storedProfileId);
-        }
-      };
-
-      // Se os parâmetros da navegação estiverem disponíveis, use-os
-      if (route.params) {
-        const { token, profileId } = route.params;
-        setToken(token);
-        setProfileId(profileId);
-      } else {
-        // Se não, busca do AsyncStorage
-        getTokenAndProfileId();
-      }
-    }, [route.params])
+    useCallback(() => { fetchMedications(); }, [fetchMedications])
   );
 
-  // Carrega os medicamentos assim que token e profileId são encontrados
-  useEffect(() => {
-    if (token && profileId) {
-      fetchMedications();
+  const handleDelete = async (id) => {
+    try {
+      await removerMedicamento(id);
+      await cancelAlarmsForMedication(id);
+      setMedications(prev => prev.filter(m => m.id !== id));
+      setModalVisible(false);
+    } catch {
+      Alert.alert('Erro', 'Não foi possível excluir o medicamento.');
     }
-  }, [token, profileId]);
-
-  const handleDelete = (id) => {
-    setMedications(prevMedications => prevMedications.filter(med => med.id !== id));
-    setModalVisible(false); 
   };
 
   return (
@@ -87,37 +60,49 @@ const HomeScreen = ({ navigation, route }) => {
 
       <ScrollView contentContainerStyle={stylehome.scrollContent}>
         {medications.length > 0 ? (
-          medications.map((medication) => (
-            <Card key={medication.id} onPress={() => {
-              setSelectedMedication(medication);
-              setModalVisible(true);
-            }}>
+          medications.map((med) => (
+            <Card
+              key={med.id}
+              onPress={() => { setSelectedMedication(med); setModalVisible(true); }}
+            >
               <View style={stylehome.cardContent}>
                 <Image
                   source={require('../../../assets/icons/capsula.png')}
                   style={stylehome.cardImage}
                 />
                 <View style={stylehome.cardTextContainer}>
-                  <Text style={stylehome.cardTitle}>{medication.nome || 'Nome não disponível'}</Text>
-                  <Text style={stylehome.cardDescription}>
-                    {medication.descricao || 'Descrição não disponível'}
-                  </Text>
+                  <Text style={stylehome.cardTitle}>{med.nome}</Text>
+                  <Text style={stylehome.cardDescription}>{med.principio}</Text>
                 </View>
               </View>
               <Text style={stylehome.cardDetails}>
-                • Dosagem: <Text style={stylehome.highlight}>{medication.dosagem || 'Não disponível'}</Text>
+                • {med.dose}{med.unidade ? ` ${med.unidade}` : ''}
               </Text>
-              <Text style={stylehome.cardDetails}>
-                • Quantidade disponível: <Text style={stylehome.highlight}>{medication.quantidade || '0'}</Text>
-              </Text>
+              {med.created_at ? (
+                <Text style={stylehome.cardDetails}>
+                  • Iniciado à <Text style={stylehome.highlight}>{diasDesde(med.created_at)}</Text>
+                </Text>
+              ) : null}
+              {med.estoque != null ? (
+                <Text style={stylehome.cardDetails}>
+                  • Restam <Text style={stylehome.highlight}>{med.estoque} {med.unidade || 'unidades'}</Text>
+                </Text>
+              ) : null}
             </Card>
           ))
         ) : (
-          <Text style={stylehome.emptyListText}>Nenhum medicamento encontrado.</Text>
+          <Text style={stylehome.emptyListText}>Nenhum medicamento cadastrado.</Text>
         )}
       </ScrollView>
 
-      <FooterNavigation token={token} profileId={profileId} />
+      <TouchableOpacity
+        style={stylehome.fab}
+        onPress={() => navigation.navigate('AddMedScreen', { perfilId })}
+      >
+        <Text style={stylehome.fabText}>+</Text>
+      </TouchableOpacity>
+
+      <FooterNavigation />
 
       {selectedMedication && (
         <ModalComponent
@@ -125,7 +110,8 @@ const HomeScreen = ({ navigation, route }) => {
           medication={selectedMedication}
           onClose={() => setModalVisible(false)}
           navigation={navigation}
-          onDelete={handleDelete} 
+          onDelete={handleDelete}
+          onRefresh={fetchMedications}
         />
       )}
     </View>

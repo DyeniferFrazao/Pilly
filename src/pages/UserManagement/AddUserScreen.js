@@ -1,119 +1,75 @@
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  Image,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  Modal,
-  TouchableWithoutFeedback,
-  Alert,
+  View, Text, TouchableOpacity, Image, ScrollView,
+  KeyboardAvoidingView, Platform, Modal, TouchableWithoutFeedback, Alert,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { AntDesign, FontAwesome } from '@expo/vector-icons';
 import InputComponent from '../../components/InputComponent';
 import styles from '../../style/styleadduser';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '../../contexts/AuthContext';
+import { criarPerfil } from '../../services/profileService';
 
 const AddUserScreen = ({ navigation }) => {
+  const { user } = useAuth();
   const [image, setImage] = useState(null);
-  const [name, setname] = useState('');
+  const [nome, setNome] = useState('');
   const [bio, setBio] = useState('');
   const [imageModalVisible, setImageModalVisible] = useState(false);
-  const [profileModalVisible, setProfileModalVisible] = useState(false);
-  const [token, setToken] = useState(null);
-  const [profileId, setProfileId] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   const pickImage = async () => {
-    try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permissão negada', 'Precisamos da permissão para acessar a galeria.');
-        return;
-      }
-      setImageModalVisible(true);
-    } catch (error) {
-      console.error('Erro ao solicitar permissão de galeria:', error);
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permissão negada', 'Precisamos de acesso à galeria.');
+      return;
     }
+    setImageModalVisible(true);
   };
 
   const launchGallery = async () => {
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 1,
-      });
-
-      if (!result.cancelled) {
-        setImage(result.uri);
-      }
-      setImageModalVisible(false);
-    } catch (error) {
-      console.error('Erro ao abrir a galeria:', error);
-    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (!result.canceled) setImage(result.assets[0].uri);
+    setImageModalVisible(false);
   };
 
   const launchCamera = async () => {
-    try {
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permissão negada', 'Precisamos da permissão para acessar a câmera.');
-        return;
-      }
-      const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 1,
-      });
-
-      if (!result.cancelled) {
-        setImage(result.uri);
-      }
-      setImageModalVisible(false);
-    } catch (error) {
-      console.error('Erro ao abrir a câmera:', error);
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permissão negada', 'Precisamos de acesso à câmera.');
+      return;
     }
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (!result.canceled) setImage(result.assets[0].uri);
+    setImageModalVisible(false);
   };
 
   const saveProfile = async () => {
-    const apiIp = await AsyncStorage.getItem('apiIp');
-    if (name.trim() === '' || bio.trim() === '') {
-      Alert.alert('Campos obrigatórios', 'Por favor, preencha o nome de usuário e a bio.');
+    if (!nome.trim()) {
+      Alert.alert('Atenção', 'Preencha o nome do perfil.');
       return;
     }
-  
+
+    setLoading(true);
     try {
-      const token = await AsyncStorage.getItem('token'); // Recupera o token do armazenamento
-      const response = await fetch('https://'+ apiIp +'/profiles/create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`, // Envia o token para autenticação
-        },
-        body: JSON.stringify({
-          name,
-          bio,
-          image,
-        }),
-      });
-  
-      if (response.ok) {
-        Alert.alert('Sucesso', 'Usuário adicionado com sucesso!');
-        navigation.navigate('User', { refresh: true, token, profileId }); // Redireciona e força atualização
-      } else {
-        const error = await response.json();
-        Alert.alert('Erro', error.message || 'Falha ao adicionar usuário.');
-      }
+      await criarPerfil(user.id, { nome: nome.trim(), bio: bio.trim(), foto_url: image });
+      Alert.alert('Sucesso', 'Perfil adicionado!');
+      navigation.goBack();
     } catch (error) {
-      console.error('Erro ao salvar o perfil:', error);
-      Alert.alert('Erro', 'Ocorreu um erro ao adicionar o usuário.');
+      Alert.alert('Erro', error.message || 'Falha ao adicionar perfil.');
+    } finally {
+      setLoading(false);
     }
-  };  
-  
+  };
 
   return (
     <KeyboardAvoidingView
@@ -138,8 +94,8 @@ const AddUserScreen = ({ navigation }) => {
           </TouchableOpacity>
 
           <InputComponent
-            value={name}
-            onChangeText={setname}
+            value={nome}
+            onChangeText={setNome}
             placeholder="Nome de usuário"
             width={300}
             height={47}
@@ -157,8 +113,12 @@ const AddUserScreen = ({ navigation }) => {
             textAlignVertical="top"
           />
 
-          <TouchableOpacity onPress={saveProfile} style={styles.addButton}>
-            <Text style={styles.buttonText}>Adicionar</Text>
+          <TouchableOpacity
+            onPress={saveProfile}
+            style={[styles.addButton, loading && { opacity: 0.6 }]}
+            disabled={loading}
+          >
+            <Text style={styles.buttonText}>{loading ? 'Salvando...' : 'Adicionar'}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.cancelButton}>
@@ -166,7 +126,6 @@ const AddUserScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
-       
         <Modal visible={imageModalVisible} transparent>
           <TouchableWithoutFeedback onPress={() => setImageModalVisible(false)}>
             <View style={styles.modalContainer}>
@@ -178,17 +137,6 @@ const AddUserScreen = ({ navigation }) => {
                 <TouchableOpacity onPress={launchCamera} style={styles.modalButton}>
                   <Text style={styles.modalButtonText}>Tirar foto</Text>
                 </TouchableOpacity>
-              </View>
-            </View>
-          </TouchableWithoutFeedback>
-        </Modal>
-
-       
-        <Modal visible={profileModalVisible} transparent>
-          <TouchableWithoutFeedback onPress={() => setProfileModalVisible(false)}>
-            <View style={styles.modalContainer}>
-              <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>Perfil atualizado!</Text>
               </View>
             </View>
           </TouchableWithoutFeedback>
