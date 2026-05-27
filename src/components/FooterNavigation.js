@@ -1,52 +1,80 @@
 import React, { useState, useEffect } from 'react';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { View, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Feather, AntDesign } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const FooterNavigation = () => {
   const navigation = useNavigation();
-  const [token, setToken] = useState(null);
-  const [profileId, setProfileId] = useState(null);
+  const [perfilId, setPerfilId] = useState(null);
+  const [perfilNome, setPerfilNome] = useState('');
 
-  // Função para pegar os dados do AsyncStorage
-  const getTokenAndProfileId = async () => {
-    const storedToken = await AsyncStorage.getItem('token');
-    const storedProfileId = await AsyncStorage.getItem('profileId');
-    setToken(storedToken);
-    setProfileId(storedProfileId);
+  const carregarPerfilAtivo = async () => {
+    const storedId = await AsyncStorage.getItem('perfilId');
+    const storedNome = await AsyncStorage.getItem('perfilNome');
+    setPerfilId(storedId);
+    setPerfilNome(storedNome ?? '');
   };
 
   useEffect(() => {
-    getTokenAndProfileId(); // Carrega os dados do AsyncStorage ao montar o componente
+    carregarPerfilAtivo();
   }, []);
 
-  const handleNavigation = async () => {
-    if (token && profileId) {
-      navigation.navigate('Home', { token, profileId });
-    } else {
-      if (profileId == null) {
-        console.error("Selecione um Perfil");
-      }}
+  // Recarrega sempre que a tela em que o footer está volta a ter foco
+  useFocusEffect(
+    React.useCallback(() => {
+      carregarPerfilAtivo();
+    }, [])
+  );
+
+  const exigirPerfil = (acao) => {
+    if (!perfilId) {
+      Alert.alert(
+        'Selecione um perfil',
+        'Escolha um perfil antes de continuar.',
+        [{ text: 'Ok', onPress: () => navigation.navigate('User') }]
+      );
+      return false;
+    }
+    acao();
+    return true;
   };
+
+  const irParaHome = () =>
+    exigirPerfil(() =>
+      navigation.navigate('Home', { perfilId, perfilNome })
+    );
+
+  const irParaAddMed = () =>
+    exigirPerfil(() =>
+      navigation.navigate('AddMedScreen', { perfilId, perfilNome })
+    );
 
   return (
     <View style={styles.footer}>
-      <TouchableOpacity onPress={handleNavigation}>
+      <TouchableOpacity onPress={irParaHome} accessibilityLabel="Início">
         <Feather name="home" size={24} color="white" />
       </TouchableOpacity>
-      <TouchableOpacity onPress={() => navigation.navigate('Map')}>
+      <TouchableOpacity onPress={() => navigation.navigate('Map')} accessibilityLabel="Mapa">
         <Feather name="map-pin" size={24} color="white" />
       </TouchableOpacity>
       <TouchableOpacity
         style={styles.addButton}
-        onPress={() => navigation.navigate('AddMedScreen', { token, profileId })}>
+        onPress={irParaAddMed}
+        accessibilityLabel="Adicionar medicamento"
+      >
         <AntDesign name="plus" size={36} color="white" />
       </TouchableOpacity>
-      <TouchableOpacity onPress={() => navigation.navigate('User', { token, profileId })}>
+      <TouchableOpacity
+        onPress={() => navigation.navigate('User')}
+        accessibilityLabel="Perfis"
+      >
         <Feather name="user" size={24} color="white" />
       </TouchableOpacity>
-      <TouchableOpacity onPress={() => navigation.navigate('Setting', { token, profileId })}>
+      <TouchableOpacity
+        onPress={() => navigation.navigate('Setting', { perfilId, perfilNome })}
+        accessibilityLabel="Configurações"
+      >
         <Feather name="settings" size={24} color="white" />
       </TouchableOpacity>
     </View>

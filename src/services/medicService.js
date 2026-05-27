@@ -10,14 +10,21 @@ function gerarId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-export async function listarMedicamentos(userId) {
+/**
+ * Lista os medicamentos do perfil ativo.
+ * Cada perfil (criado pelo usuário) tem seus próprios medicamentos
+ * — a tabela `medicamentos` no Supabase tem as colunas user_id e perfil_id.
+ */
+export async function listarMedicamentos(perfilId) {
+  if (!perfilId) return [];
+
   const online = await estaOnline();
 
   if (online) {
     const { data, error } = await supabase
       .from('medicamentos')
       .select('*')
-      .eq('user_id', userId)
+      .eq('perfil_id', perfilId)
       .eq('ativo', true)
       .order('nome');
 
@@ -29,7 +36,7 @@ export async function listarMedicamentos(userId) {
   }
 
   // Fallback offline
-  return buscarMedicamentosLocais(userId);
+  return buscarMedicamentosLocais(perfilId);
 }
 
 export async function buscarMedicamento(id) {
@@ -42,14 +49,30 @@ export async function buscarMedicamento(id) {
   return data;
 }
 
-export async function adicionarMedicamento(userId, dados) {
+/**
+ * Adiciona um medicamento vinculando-o ao perfil ativo.
+ * @param {string} perfilId — id do perfil que toma o medicamento (obrigatório).
+ * @param {object} dados — campos do formulário (nome, dose, etc.).
+ * @param {string} userId — id do usuário dono da conta (auth.users).
+ */
+export async function adicionarMedicamento(perfilId, dados, userId) {
+  if (!perfilId) {
+    throw new Error('Selecione um perfil antes de cadastrar o medicamento.');
+  }
+
   const online = await estaOnline();
+  const payload = {
+    perfil_id: perfilId,
+    user_id: userId,
+    ...dados,
+    ativo: true,
+  };
 
   if (online) {
     // Deixa o Supabase gerar o UUID via gen_random_uuid()
     const { data, error } = await supabase
       .from('medicamentos')
-      .insert({ user_id: userId, ...dados, ativo: true })
+      .insert(payload)
       .select()
       .single();
     if (error) throw new Error(error.message);
@@ -60,9 +83,7 @@ export async function adicionarMedicamento(userId, dados) {
   // Offline: usa ID temporário local
   const novoMed = {
     id: gerarId(),
-    user_id: userId,
-    ...dados,
-    ativo: true,
+    ...payload,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
@@ -94,10 +115,18 @@ export async function removerMedicamento(id) {
   }
 }
 
-export async function registrarDose(medicamentoId, userId, status = 'tomado') {
+export async function registrarDose(
+  medicamentoId,
+  userId,
+  status = 'tomado',
+  perfilId = null,
+  horarioPrevisto = null,
+) {
   const dose = {
     medicamento_id: medicamentoId,
     user_id: userId,
+    perfil_id: perfilId,
+    horario_previsto: horarioPrevisto,
     status,
     tomado_em: new Date().toISOString(),
   };
@@ -107,5 +136,33 @@ export async function registrarDose(medicamentoId, userId, status = 'tomado') {
     await supabase.from('doses_historico').insert(dose);
   } else {
     await enfileirarSync('doses_historico', 'INSERT', dose);
+  }
+}
+
+/**
+ * Retorna as doses marcadas como "tomado" hoje para um perfil.
+ * Usado pela seção de progresso na HomeScreen.
+ *
+ * @param {string} perfilId
+ * @returns {{ tomadas: number, total: number }} — total é calculado pelo chamador
+ */
+export async function buscarDosesHoje(perfilId) {
+  if (!perfilId) return [];
+  try {
+    const hoje     = new Date();
+    const inicioDia = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 0,  0,  0).toISOString();
+    const fimDia    = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 23, 59, 59).toISOString();
+
+    const { data, error } = await supabase
+      .from('doses_historico')
+      .select('id, medicamento_id, status, tomado_em')
+      .eq('perfil_id', perfilId)
+      .gte('tomado_em', inicioDia)
+      .lte('tomado_em', fimDia);
+
+    if (error) return [];
+    return data ?? [];
+  } catch {
+    return [];
   }
 }

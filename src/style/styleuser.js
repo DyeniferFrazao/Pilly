@@ -66,17 +66,20 @@ const styles = StyleSheet.create({
     resizeMode: 'contain',
     marginRight: 20,
   },
-  bioText: {
-    flex: 1,
-    fontSize: 14,
-    color: '#333333',
-  },
+  // Nome do perfil — destaque principal
   usernameText: {
-    fontSize: 12,
+    flex: 1,
+    fontSize: 16,
     fontWeight: 'bold',
-    marginTop: 10,
+    color: '#222222',
+    marginLeft: 4,
+  },
+  // Bio do perfil — informação secundária
+  bioText: {
+    fontSize: 13,
     color: '#2E7D8A',
-    marginBottom: 0,
+    marginTop: 6,
+    marginLeft: 4,
   },
   medicationContainer: {
     flexDirection: 'row',

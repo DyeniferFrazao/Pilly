@@ -1,149 +1,485 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
-import MapView, { Marker, Callout } from 'react-native-maps';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  FlatList,
+  ActivityIndicator,
+  Linking,
+  Alert,
+  StyleSheet,
+  Dimensions,
+  Platform,
+} from 'react-native';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
-import { Ionicons, Feather } from 'react-native-vector-icons';
-import styles from '../../style/stylemap';
+import { Feather } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { GOOGLE_MAPS_API_KEY } from '../../config';
 
+const { width, height } = Dimensions.get('window');
+
+// ─── Haversine: distância em km entre dois pontos ────────────────────────────
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function formatarDistancia(km) {
+  if (km < 1) return `${Math.round(km * 1000)} m`;
+  return `${km.toFixed(1)} km`;
+}
+
+// ─── Componente principal ─────────────────────────────────────────────────────
 const MapScreen = ({ navigation }) => {
-  const [location, setLocation] = useState(null);
-  const [errorMsg, setErrorMsg] = useState(null);
-  const [search, setSearch] = useState('');
-  const [selectedPharmacy, setSelectedPharmacy] = useState(null);
+  const mapRef = useRef(null);
 
-  // TODO: Futuramente buscar farmácias da API em vez de hardcoded
-  const pharmacies = [
-    { name: 'Farmácia São João - São Cristóvão', coordinate: { latitude: -28.2629, longitude: -52.4064 }, rating: 4.5, address: 'Avenida Presidente Vargas, 1020', cep: '99070-000', phone: '(54) 3317-7070' },
-    { name: 'Farmácia Panvel - Centro', coordinate: { latitude: -28.2635, longitude: -52.4050 }, rating: 4.8, address: 'Rua Morom, 285', cep: '99010-000', phone: '(54) 3314-1313' },
-    { name: 'Farmácia Pague Menos', coordinate: { latitude: -28.2660, longitude: -52.4085 }, rating: 4.3, address: 'Avenida Brasil Leste, 1325', cep: '99050-000', phone: '(54) 3317-2323' },
-    { name: 'Farmácia Econômica', coordinate: { latitude: -28.2640, longitude: -52.4030 }, rating: 4.0, address: 'Rua Bento Gonçalves, 740', cep: '99025-000', phone: '(54) 3313-1212' },
-    { name: 'Farmácia São Lucas', coordinate: { latitude: -28.2670, longitude: -52.4045 }, rating: 4.6, address: 'Rua Coronel Chicuta, 145', cep: '99010-000', phone: '(54) 3315-7878' },
-    { name: 'Farmácia Vida Farma', coordinate: { latitude: -28.2618, longitude: -52.4070 }, rating: 4.4, address: 'Rua Teixeira Soares, 990', cep: '99030-000', phone: '(54) 3316-6565' },
-    { name: 'Farmácia do Trabalhador', coordinate: { latitude: -28.2652, longitude: -52.4080 }, rating: 4.1, address: 'Rua Uruguai, 305', cep: '99020-000', phone: '(54) 3314-4141' },
-    { name: 'Farmácia São João - Vera Cruz', coordinate: { latitude: -28.2685, longitude: -52.4095 }, rating: 4.7, address: 'Avenida Salgado Filho, 890', cep: '99040-000', phone: '(54) 3318-9090' },
-    { name: 'Farmácia Popular', coordinate: { latitude: -28.2690, longitude: -52.4025 }, rating: 4.2, address: 'Rua Paissandu, 645', cep: '99035-000', phone: '(54) 3317-7171' },
-    { name: 'Farmácia Big Farma', coordinate: { latitude: -28.2700, longitude: -52.4060 }, rating: 4.5, address: 'Rua Independência, 1120', cep: '99045-000', phone: '(54) 3319-8989' },
-  ];
+  const [userLocation, setUserLocation]     = useState(null);
+  const [pharmacies,   setPharmacies]       = useState([]);
+  const [filtered,     setFiltered]         = useState([]);
+  const [selected,     setSelected]         = useState(null);
+  const [search,       setSearch]           = useState('');
+  const [loading,      setLoading]          = useState(true);
+  const [loadingMsg,   setLoadingMsg]       = useState('Obtendo localização…');
+  const [error,        setError]            = useState(null);
 
-  useEffect(() => {
-    (async () => {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setErrorMsg('Permission to access location was denied');
-        return;
+  // ── Busca farmácias na Places API ─────────────────────────────────────────
+  const buscarFarmacias = useCallback(async (lat, lng) => {
+    setLoadingMsg('Buscando farmácias próximas…');
+    try {
+      const url =
+        `https://maps.googleapis.com/maps/api/place/nearbysearch/json` +
+        `?location=${lat},${lng}` +
+        `&radius=5000` +
+        `&type=pharmacy` +
+        `&language=pt-BR` +
+        `&key=${AIzaSyCBMKCiDABaYr0d4L5FVT8gtaLPZFSF2Y8}`;
+
+      const response = await fetch(url);
+      const json     = await response.json();
+
+      if (json.status !== 'OK' && json.status !== 'ZERO_RESULTS') {
+        throw new Error(json.error_message || json.status);
       }
-      let currentLocation = await Location.getCurrentPositionAsync({});
-      setLocation(currentLocation);
-    })();
+
+      const results = (json.results ?? []).map((place) => ({
+        id:        place.place_id,
+        nome:      place.name,
+        endereco:  place.vicinity ?? '',
+        rating:    place.rating ?? null,
+        aberta:    place.opening_hours?.open_now ?? null,
+        lat:       place.geometry.location.lat,
+        lng:       place.geometry.location.lng,
+        distancia: haversine(lat, lng, place.geometry.location.lat, place.geometry.location.lng),
+      }));
+
+      // Ordena por distância
+      results.sort((a, b) => a.distancia - b.distancia);
+
+      setPharmacies(results);
+      setFiltered(results);
+    } catch (e) {
+      setError('Não foi possível carregar as farmácias. Verifique sua conexão e a chave de API.');
+      console.error('[MapScreen] buscarFarmacias:', e);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
+  // ── Permissão de localização e posição do usuário ─────────────────────────
+  useEffect(() => {
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setError('Permissão de localização negada. Ative-a nas configurações do dispositivo.');
+        setLoading(false);
+        return;
+      }
+      try {
+        const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        const { latitude, longitude } = pos.coords;
+        setUserLocation({ latitude, longitude });
+        await buscarFarmacias(latitude, longitude);
+      } catch {
+        setError('Não foi possível obter sua localização.');
+        setLoading(false);
+      }
+    })();
+  }, [buscarFarmacias]);
+
+  // ── Filtro por nome ───────────────────────────────────────────────────────
   const handleSearch = (text) => {
     setSearch(text);
-    const pharmacy = pharmacies.find((p) =>
-      p.name.toLowerCase().includes(text.toLowerCase())
-    );
-    setSelectedPharmacy(pharmacy || null);
-  };
-
-  const clearSearch = () => {
-    setSearch('');
-    setSelectedPharmacy(null);
-  };
-
-  const handleLupaPress = () => {
-    if (!search.trim()) {
-      Alert.alert('Aviso', 'Por favor, digite algo no campo de busca.');
+    if (!text.trim()) {
+      setFiltered(pharmacies);
+      setSelected(null);
+      return;
     }
+    const lc = text.toLowerCase();
+    setFiltered(pharmacies.filter(p => p.nome.toLowerCase().includes(lc)));
   };
 
-  const resetMap = () => {
-    setSelectedPharmacy(null);
+  const limparBusca = () => {
     setSearch('');
+    setFiltered(pharmacies);
+    setSelected(null);
   };
 
-  return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Feather name="arrow-left-circle" size={30} color="#62A4B0" />
+  // ── Selecionar farmácia ───────────────────────────────────────────────────
+  const selecionarFarmacia = (farm) => {
+    setSelected(farm);
+    mapRef.current?.animateToRegion(
+      { latitude: farm.lat, longitude: farm.lng, latitudeDelta: 0.01, longitudeDelta: 0.01 },
+      600,
+    );
+  };
+
+  // ── Abrir rota no Google Maps ─────────────────────────────────────────────
+  const abrirRota = (farm) => {
+    const url = Platform.select({
+      ios:     `maps://app?daddr=${farm.lat},${farm.lng}`,
+      android: `google.navigation:q=${farm.lat},${farm.lng}`,
+    });
+    const fallback = `https://www.google.com/maps/dir/?api=1&destination=${farm.lat},${farm.lng}`;
+    Linking.canOpenURL(url)
+      .then(ok => Linking.openURL(ok ? url : fallback))
+      .catch(() => Linking.openURL(fallback));
+  };
+
+  // ── Recentrar no usuário ──────────────────────────────────────────────────
+  const recentrar = () => {
+    if (!userLocation) return;
+    mapRef.current?.animateToRegion(
+      { ...userLocation, latitudeDelta: 0.03, longitudeDelta: 0.03 },
+      600,
+    );
+    setSelected(null);
+  };
+
+  // ─── Estado de loading / erro ─────────────────────────────────────────────
+  if (loading) {
+    return (
+      <View style={s.center}>
+        <ActivityIndicator size="large" color="#2E7D8A" />
+        <Text style={s.loadingText}>{loadingMsg}</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={s.center}>
+        <Feather name="alert-circle" size={40} color="#E57373" />
+        <Text style={s.errorText}>{error}</Text>
+        <TouchableOpacity style={s.retryBtn} onPress={() => navigation.goBack()}>
+          <Text style={s.retryText}>Voltar</Text>
         </TouchableOpacity>
       </View>
+    );
+  }
 
+  const initialRegion = userLocation
+    ? { ...userLocation, latitudeDelta: 0.03, longitudeDelta: 0.03 }
+    : { latitude: -15.7801, longitude: -47.9292, latitudeDelta: 0.1, longitudeDelta: 0.1 };
+
+  // ─── Render ───────────────────────────────────────────────────────────────
+  return (
+    <View style={s.flex}>
+      {/* Mapa */}
       <MapView
-        style={styles.map}
-        initialRegion={{
-          latitude: -28.2632,
-          longitude: -52.4064,
-          latitudeDelta: 0.05,
-          longitudeDelta: 0.05,
-        }}
+        ref={mapRef}
+        provider={PROVIDER_GOOGLE}
+        style={StyleSheet.absoluteFillObject}
+        initialRegion={initialRegion}
         showsUserLocation
-        followsUserLocation
+        showsMyLocationButton={false}
       >
-        {selectedPharmacy ? (
-          <Marker coordinate={selectedPharmacy.coordinate} pinColor="red">
-            <Callout>
-              <Text>{selectedPharmacy.name}</Text>
-            </Callout>
-          </Marker>
-        ) : (
-          pharmacies.map((pharmacy, index) => (
-            <Marker
-              key={index}
-              coordinate={pharmacy.coordinate}
-              pinColor="red"
-              onPress={() => setSelectedPharmacy(pharmacy)}
-            >
-              <Callout>
-                <Text>{pharmacy.name}</Text>
-              </Callout>
-            </Marker>
-          ))
-        )}
-
-        {location && (
+        {filtered.map((farm) => (
           <Marker
-            coordinate={{
-              latitude: location.coords.latitude,
-              longitude: location.coords.longitude,
-            }}
-            pinColor="blue"
+            key={farm.id}
+            coordinate={{ latitude: farm.lat, longitude: farm.lng }}
+            pinColor={selected?.id === farm.id ? '#E53935' : '#2E7D8A'}
+            onPress={() => selecionarFarmacia(farm)}
           />
-        )}
+        ))}
       </MapView>
 
-      <View style={styles.searchContainer}>
-        <TouchableOpacity onPress={resetMap}>
-          <Ionicons name="arrow-back" size={24} color="black" />
+      {/* Botão voltar */}
+      <SafeAreaView edges={['top']} style={s.safeTop}>
+        <TouchableOpacity style={s.backBtn} onPress={() => navigation.goBack()}>
+          <Feather name="arrow-left" size={22} color="#2E7D8A" />
         </TouchableOpacity>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Farmácias..."
-          value={search}
-          onChangeText={handleSearch}
-        />
-        {search ? (
-          <TouchableOpacity onPress={clearSearch}>
-            <Feather name="x" size={24} color="black" />
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity onPress={handleLupaPress}>
-            <Feather name="search" size={24} color="black" />
-          </TouchableOpacity>
-        )}
+
+        {/* Barra de busca */}
+        <View style={s.searchBar}>
+          <Feather name="search" size={18} color="#8aaab0" style={{ marginRight: 6 }} />
+          <TextInput
+            style={s.searchInput}
+            placeholder="Buscar farmácia…"
+            placeholderTextColor="#aaa"
+            value={search}
+            onChangeText={handleSearch}
+            returnKeyType="search"
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={limparBusca}>
+              <Feather name="x" size={18} color="#666" />
+            </TouchableOpacity>
+          )}
+        </View>
+      </SafeAreaView>
+
+      {/* Botão recentrar */}
+      <TouchableOpacity style={s.recenterBtn} onPress={recentrar}>
+        <Feather name="navigation" size={20} color="#2E7D8A" />
+      </TouchableOpacity>
+
+      {/* Contador de resultados */}
+      <View style={s.countBadge}>
+        <Text style={s.countText}>
+          {filtered.length} farmácia{filtered.length !== 1 ? 's' : ''} encontrada{filtered.length !== 1 ? 's' : ''}
+        </Text>
       </View>
 
-      {selectedPharmacy && (
-        <View style={styles.pharmacyInfo}>
-          <Text style={styles.pharmacyName}>{selectedPharmacy.name}</Text>
-          <Text>{selectedPharmacy.rating} ★</Text>
-          <Text>{selectedPharmacy.address}</Text>
-          <Text>CEP: {selectedPharmacy.cep}</Text>
-          <Text>Telefone: {selectedPharmacy.phone}</Text>
+      {/* Card da farmácia selecionada */}
+      {selected ? (
+        <View style={s.detailCard}>
+          {/* Indicador aberto/fechado */}
+          {selected.aberta !== null && (
+            <View style={[s.statusBadge, selected.aberta ? s.aberta : s.fechada]}>
+              <Text style={s.statusText}>{selected.aberta ? 'Aberta agora' : 'Fechada'}</Text>
+            </View>
+          )}
+
+          <Text style={s.detailNome} numberOfLines={2}>{selected.nome}</Text>
+          <Text style={s.detailEnd} numberOfLines={2}>{selected.endereco}</Text>
+
+          <View style={s.detailRow}>
+            {selected.rating && (
+              <View style={s.ratingRow}>
+                <Feather name="star" size={14} color="#F9A825" />
+                <Text style={s.ratingText}>{selected.rating.toFixed(1)}</Text>
+              </View>
+            )}
+            <View style={s.distRow}>
+              <Feather name="map-pin" size={14} color="#2E7D8A" />
+              <Text style={s.distText}>{formatarDistancia(selected.distancia)}</Text>
+            </View>
+          </View>
+
+          <View style={s.actionRow}>
+            <TouchableOpacity
+              style={s.routeBtn}
+              onPress={() => abrirRota(selected)}
+            >
+              <Feather name="navigation-2" size={16} color="#fff" />
+              <Text style={s.routeText}>Abrir rota</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={s.closeBtn} onPress={() => setSelected(null)}>
+              <Feather name="x" size={18} color="#666" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : (
+        /* Lista compacta de farmácias próximas */
+        <View style={s.listContainer}>
+          <Text style={s.listTitle}>Farmácias próximas</Text>
+          <FlatList
+            data={filtered.slice(0, 8)}
+            keyExtractor={item => item.id}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 16, gap: 10 }}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={s.listCard}
+                onPress={() => selecionarFarmacia(item)}
+              >
+                <Text style={s.listCardNome} numberOfLines={2}>{item.nome}</Text>
+                <View style={s.listCardFooter}>
+                  {item.rating ? (
+                    <View style={s.ratingRow}>
+                      <Feather name="star" size={11} color="#F9A825" />
+                      <Text style={s.ratingSmall}>{item.rating.toFixed(1)}</Text>
+                    </View>
+                  ) : null}
+                  <Text style={s.distSmall}>{formatarDistancia(item.distancia)}</Text>
+                </View>
+              </TouchableOpacity>
+            )}
+          />
         </View>
       )}
     </View>
   );
 };
+
+// ─── Estilos ──────────────────────────────────────────────────────────────────
+const s = StyleSheet.create({
+  flex:   { flex: 1 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
+
+  // Loading / erro
+  loadingText: { marginTop: 14, fontSize: 15, color: '#555' },
+  errorText:   { marginTop: 12, fontSize: 14, color: '#555', textAlign: 'center' },
+  retryBtn:    { marginTop: 20, backgroundColor: '#2E7D8A', paddingHorizontal: 24, paddingVertical: 10, borderRadius: 8 },
+  retryText:   { color: '#fff', fontWeight: '600' },
+
+  // Topo
+  safeTop: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10 },
+
+  backBtn: {
+    alignSelf: 'flex-start',
+    marginLeft: 16,
+    marginTop: 8,
+    backgroundColor: '#fff',
+    borderRadius: 50,
+    padding: 8,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+  },
+
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 4,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+  },
+  searchInput: { flex: 1, fontSize: 15, color: '#222' },
+
+  // Recentrar
+  recenterBtn: {
+    position: 'absolute',
+    right: 16,
+    bottom: 210,
+    backgroundColor: '#fff',
+    borderRadius: 50,
+    padding: 10,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+  },
+
+  // Contador
+  countBadge: {
+    position: 'absolute',
+    top: 145,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(46,125,138,0.85)',
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+  },
+  countText: { color: '#fff', fontSize: 12, fontWeight: '600' },
+
+  // Card de detalhe
+  detailCard: {
+    position: 'absolute',
+    bottom: 30,
+    left: 16,
+    right: 16,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 8,
+  },
+  statusBadge:  { alignSelf: 'flex-start', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3, marginBottom: 6 },
+  aberta:       { backgroundColor: '#E8F5E9' },
+  fechada:      { backgroundColor: '#FFEBEE' },
+  statusText:   { fontSize: 11, fontWeight: '700', color: '#333' },
+
+  detailNome: { fontSize: 17, fontWeight: '700', color: '#1A3C44', marginBottom: 4 },
+  detailEnd:  { fontSize: 13, color: '#666', marginBottom: 10 },
+
+  detailRow:  { flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 14 },
+  ratingRow:  { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  ratingText: { fontSize: 13, color: '#555', fontWeight: '600' },
+  distRow:    { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  distText:   { fontSize: 13, color: '#2E7D8A', fontWeight: '600' },
+
+  actionRow:  { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  routeBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#2E7D8A',
+    borderRadius: 10,
+    paddingVertical: 10,
+    gap: 8,
+  },
+  routeText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  closeBtn: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 10,
+    padding: 10,
+  },
+
+  // Lista horizontal
+  listContainer: {
+    position: 'absolute',
+    bottom: 30,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(255,255,255,0.97)',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 14,
+    paddingBottom: 20,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: -2 },
+    shadowRadius: 6,
+  },
+  listTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#2E7D8A',
+    marginLeft: 16,
+    marginBottom: 10,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  listCard: {
+    width: 150,
+    backgroundColor: '#EAF4F6',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#C8E6EA',
+  },
+  listCardNome:   { fontSize: 13, fontWeight: '600', color: '#1A3C44', marginBottom: 8, lineHeight: 18 },
+  listCardFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  ratingSmall:    { fontSize: 11, color: '#555', fontWeight: '600' },
+  distSmall:      { fontSize: 11, color: '#2E7D8A', fontWeight: '600' },
+});
 
 export default MapScreen;

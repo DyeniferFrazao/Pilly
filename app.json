@@ -14,17 +14,33 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.CuidaBem"
+      "bundleIdentifier": "com.anonymous.Pilly",
+      "config": {
+        "googleMapsApiKey": "AIzaSyCBMKCiDABaYr0d4L5FVT8gtaLPZFSF2Y8"
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/icons/icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.anonymous.CuidaBem"
+      "package": "com.anonymous.Pilly",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyCBMKCiDABaYr0d4L5FVT8gtaLPZFSF2Y8"
+        }
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "O Pilly precisa da sua localização para encontrar farmácias próximas."
+        }
+      ]
+    ]
   }
 }

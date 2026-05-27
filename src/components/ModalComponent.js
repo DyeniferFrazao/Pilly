@@ -6,10 +6,24 @@ import {
 import { cancelAlarmsForMedication } from '../services/alarmService';
 import { removerMedicamento } from '../services/medicService';
 
-const ModalComponent = ({ visible, medication, onClose, navigation, onDelete, onRefresh }) => {
+/** Converte duracao_tipo + duracao_valor para texto legível */
+function formatarDuracao(tipo, valor) {
+  if (!tipo) return null;
+  const labels = {
+    dias:          (v) => v ? `${v} dia${v > 1 ? 's' : ''}` : 'Dias',
+    semanas:       (v) => v ? `${v} semana${v > 1 ? 's' : ''}` : 'Semanas',
+    meses:         (v) => v ? `${v} ${v > 1 ? 'meses' : 'mês'}` : 'Meses',
+    cronica:       ()  => 'Crônico (contínuo)',
+    indeterminado: ()  => 'Indeterminado',
+  };
+  return labels[tipo]?.(valor) ?? null;
+}
+
+const ModalComponent = ({ visible, medication, onClose, navigation, onDelete, onRefresh, perfilNome }) => {
   if (!medication) return null;
 
   const horarios = Array.isArray(medication.horarios) ? medication.horarios : [];
+  const duracaoTexto = formatarDuracao(medication.duracao_tipo, medication.duracao_valor);
 
   const handleDelete = () => {
     Alert.alert(
@@ -77,6 +91,13 @@ const ModalComponent = ({ visible, medication, onClose, navigation, onDelete, on
                   <Text style={s.detalhe}>• {medication.observacoes}</Text>
                 ) : null}
 
+                {duracaoTexto ? (
+                  <View style={s.duracaoRow}>
+                    <Text style={s.duracaoLabel}>Duração do tratamento</Text>
+                    <Text style={s.duracaoValor}>{duracaoTexto}</Text>
+                  </View>
+                ) : null}
+
                 <View style={s.alarmRow}>
                   <Text style={s.label}>Habilitar Alarme</Text>
                   <Switch
@@ -101,7 +122,10 @@ const ModalComponent = ({ visible, medication, onClose, navigation, onDelete, on
                   style={s.btnPrimary}
                   onPress={() => {
                     onClose();
-                    navigation.navigate('AddMedScreen', { perfilId: medication.user_id });
+                    navigation.navigate('AddMedScreen', {
+                      perfilId:   medication.perfil_id,
+                      perfilNome: perfilNome ?? '',
+                    });
                   }}
                 >
                   <Text style={s.btnPrimaryText}>Adicionar mais</Text>
@@ -111,7 +135,12 @@ const ModalComponent = ({ visible, medication, onClose, navigation, onDelete, on
                   style={s.btnSecondary}
                   onPress={() => {
                     onClose();
-                    navigation.navigate('EditProfileScreen', { medication });
+                    // Abre AddMedScreen em modo edição, com todos os dados pré-preenchidos
+                    navigation.navigate('AddMedScreen', {
+                      medicamento: medication,
+                      perfilId:    medication.perfil_id,
+                      perfilNome:  perfilNome ?? '',
+                    });
                   }}
                 >
                   <Text style={s.btnSecondaryText}>Editar</Text>
@@ -209,6 +238,27 @@ const s = StyleSheet.create({
     color: '#60A2AE',
     fontWeight: 'bold',
     fontSize: 15,
+  },
+  duracaoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F0F8FA',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  duracaoLabel: {
+    fontSize: 13,
+    color: '#555',
+    fontWeight: '600',
+  },
+  duracaoValor: {
+    fontSize: 13,
+    color: '#2E7D8A',
+    fontWeight: 'bold',
   },
 });
 

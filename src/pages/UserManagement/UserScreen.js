@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, Image, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { AntDesign } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Card from '../../components/Card';
 import FooterNavigation from '../../components/FooterNavigation';
 import styles from '../../style/styleuser';
@@ -23,7 +24,10 @@ const UserScreen = () => {
     }, [user])
   );
 
-  const handleSelectProfile = (perfil) => {
+  const handleSelectProfile = async (perfil) => {
+    // Persiste o perfil ativo para o FooterNavigation e telas internas
+    await AsyncStorage.setItem('perfilId', perfil.id);
+    await AsyncStorage.setItem('perfilNome', perfil.nome ?? '');
     navigation.navigate('Home', { perfilId: perfil.id, perfilNome: perfil.nome });
   };
 
@@ -37,6 +41,11 @@ const UserScreen = () => {
           try {
             await excluirPerfil(perfilId);
             setPerfis(prev => prev.filter(p => p.id !== perfilId));
+            // Se o perfil excluído era o ativo, limpa do AsyncStorage
+            const ativo = await AsyncStorage.getItem('perfilId');
+            if (ativo === perfilId) {
+              await AsyncStorage.multiRemove(['perfilId', 'perfilNome']);
+            }
           } catch {
             Alert.alert('Erro', 'Não foi possível excluir o perfil.');
           }
@@ -46,7 +55,7 @@ const UserScreen = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.headerText}>Perfil</Text>
       </View>
@@ -94,7 +103,7 @@ const UserScreen = () => {
       </TouchableOpacity>
 
       <FooterNavigation />
-    </View>
+    </SafeAreaView>
   );
 };
 

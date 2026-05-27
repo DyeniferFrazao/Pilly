@@ -19,7 +19,6 @@ export async function listarPerfis(userId) {
     .from('perfis')
     .select('*')
     .eq('user_id', userId)
-    .eq('ativo', true)
     .order('created_at');
 
   if (error) throw new Error(error.message);
@@ -37,10 +36,22 @@ export async function criarPerfil(userId, { nome, bio, foto_url }) {
   return data;
 }
 
+export async function atualizarPerfil(perfilId, { nome, bio, foto_url }) {
+  const { data, error } = await supabase
+    .from('perfis')
+    .update({ nome, bio, foto_url, updated_at: new Date().toISOString() })
+    .eq('id', perfilId)
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 export async function excluirPerfil(perfilId) {
   const { error } = await supabase
     .from('perfis')
-    .update({ ativo: false })
+    .delete()
     .eq('id', perfilId);
 
   if (error) throw new Error(error.message);
