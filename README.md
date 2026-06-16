@@ -6,7 +6,7 @@
 
 <p align="center">
   <b>Aderência medicamentosa com gamificação e presença comunitária anônima</b><br/>
-  Transforme a necessidade de tomar remédio em uma missão diária com recompensas divertidas.
+  Transforme o hábito de tomar remédio em uma missão diária com recompensas reais.
 </p>
 
 <p align="center">
@@ -20,9 +20,9 @@
 
 ## 📋 Sobre o Projeto
 
-O **Pilly** é um aplicativo mobile de aderência medicamentosa que combina gestão de remédios com um sistema de gamificação entre usuários reais. O diferencial não está no lembrete — está na motivação: XP, sequências de dias, conquistas e um ranking público anônimo criam o senso de pertencimento e consistência que apps tradicionais geralmente não costumam oferecer.
+O **Pilly** é um aplicativo mobile de aderência medicamentosa que combina gestão de remédios com um sistema de gamificação entre usuários reais. O diferencial não está no lembrete — está na motivação: XP, sequências de dias, conquistas e um ranking público anônimo criam o senso de pertencimento e consistência que apps tradicionais não conseguem oferecer.
 
-Desenvolvido como projeto acadêmico na **Universidade de Passo Fundo (UPF)** — Laboratório de Engenharia de Software.
+Desenvolvido como projeto acadêmico na **Universidade de Passo Fundo (UPF)** — Engenharia de Software.
 
 ### O problema real
 
@@ -270,7 +270,7 @@ Pilly/
 ## 👩‍💻 Autora
 
 **Dyênifer Thaís Frazão**
-Universidade de Passo Fundo – UPF · Laboratório de Engenharia de Software
+Universidade de Passo Fundo – UPF · Engenharia de Software
 📧 209933@upf.br
 
 ---
@@ -282,5 +282,5 @@ Projeto acadêmico — todos os direitos reservados à autora. Entre em contato 
 ---
 
 <p align="center">
-  Feito com 💙
+  Feito com 💙 em Passo Fundo/RS
 </p>

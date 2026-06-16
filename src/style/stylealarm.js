@@ -10,7 +10,7 @@ const styles = StyleSheet.create({
   cardContainer: {
     width: 330,
     height: 572,
-    backgroundColor: '#D3DEE0',
+    backgroundColor: '#C8EDF2',
     borderRadius: 10, // Bordas arredondadas para o contêiner
     justifyContent: 'center',  // Centraliza os elementos dentro do contêiner
     alignItems: 'center',      // Centraliza os elementos horizontalmente
@@ -18,12 +18,12 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    color: '#2E7D8A',
+    color: '#1D6B78',
     marginBottom: 10,
     fontWeight: 'bold',
   },
   timeDisplay: {
-    backgroundColor: '#8D989C',
+    backgroundColor: '#4A7A82',
     borderRadius: 10,
     padding: 10,
     marginVertical: 15,
@@ -39,13 +39,13 @@ const styles = StyleSheet.create({
     width: '100%', // Garante que a área dos botões ocupe toda a largura disponível
   },
   intervalButton: {
-    backgroundColor: '#62A4B0',
+    backgroundColor: '#1D6B78',
     padding: 10,
     borderRadius: 10,
     marginHorizontal: 5,
   },
   selectedButton: {
-    backgroundColor: '#2E7D8A',
+    backgroundColor: '#1D6B78',
   },
   intervalText: {
     color: '#FFFFFF',
@@ -53,12 +53,12 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 18,
-    color: '#2E7D8A',
+    color: '#1D6B78',
     marginTop: 10,
   },
   alarm: {
     fontSize: 16,
-    color: '#8D989C',
+    color: '#4A7A82',
   },
   buttonContainer: {
     marginTop: 20,
@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
   button: {
     width: 200,
     height: 50,
-    backgroundColor: '#62A4B0',
+    backgroundColor: '#1D6B78',
     borderRadius: 10, // Bordas arredondadas no botão
     justifyContent: 'center',
     alignItems: 'center',

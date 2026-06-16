@@ -25,6 +25,10 @@ export async function configurarNotificacoes() {
       lightColor: '#60A2AE',
       sound: 'default',
       enableVibrate: true,
+      // fullScreenIntent: mostra a notificação em tela cheia (como chamada),
+      // o app abre no modal mesmo com a tela bloqueada
+      bypassDnd: true,   // passa pelo "Não perturbe"
+      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
     });
   }
 
@@ -37,7 +41,7 @@ export async function configurarNotificacoes() {
     },
     {
       identifier: 'ADIAR',
-      buttonTitle: '⏰  Adiar 15 min',
+      buttonTitle: '⏰  Adiar 10 min',
       options: { opensAppToForeground: false },
     },
   ]);
@@ -74,18 +78,24 @@ export async function scheduleAlarms(
     const horario = new Date(base);
     horario.setHours(base.getHours() + interval * i);
 
+    const horarioStr = horario.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     await Notifications.scheduleNotificationAsync({
       content: {
-        title: '💊 Hora da medicação',
-        body:  `Lembre-se de tomar: ${medicationName}`,
+        title: `💊 ${horarioStr} — Hora da medicação`,
+        body:  `Lembre-se de tomar ${medicationName}. Toque para registrar.`,
         sound: 'default',
         categoryIdentifier: CATEGORIA_MED,
+        // Android: prioridade máxima para aparecer como heads-up (banner flutuante)
+        ...(Platform.OS === 'android' && {
+          priority: 'max',
+          channelId: 'medicamentos',
+        }),
         data: {
           medicationId,
           medicationName,
           perfilId,
           userId,
-          horarioPrevisto: horario.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          horarioPrevisto: horarioStr,
         },
       },
       // trigger DAILY: dispara todo dia no mesmo horário
@@ -105,7 +115,7 @@ export async function scheduleAlarms(
 /**
  * Agenda um lembrete único em N minutos (usado pelo botão "Adiar").
  */
-export async function adiarDose(medicationName, medicationId, perfilId, userId, minutos = 15) {
+export async function adiarDose(medicationName, medicationId, perfilId, userId, minutos = 10) {
   await Notifications.scheduleNotificationAsync({
     content: {
       title: '⏰ Lembrete adiado',

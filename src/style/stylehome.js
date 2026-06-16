@@ -1,130 +1,17 @@
+// stylehome.js
+// Mantido para compatibilidade com imports existentes.
+// Os estilos principais da nova HomeScreen estão inline no HomeScreen.js
+// usando StyleSheet.create() local — padrão mais sustentável para
+// componentes que têm muitas variantes de estilo.
+
 import { StyleSheet } from 'react-native';
 
 const stylehome = StyleSheet.create({
+  // Legado — não usado pela nova HomeScreen,
+  // mas mantido para evitar erro caso outro arquivo importe este módulo.
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  header: {
-    width: '100%',
-    height: 57,
-    backgroundColor: '#60A2AE',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  headerText: {
-    fontSize: 16,
-    color: '#FFFFFF',
-    fontFamily: 'System',
-    fontWeight: 'bold',
-  },
-  perfilBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'center',
-    marginHorizontal: 16,
-    marginBottom: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 22,
-    backgroundColor: '#EFF6F7',
-    borderWidth: 1,
-    borderColor: '#D5E6EA',
-  },
-  perfilBarLabel: {
-    fontSize: 12,
-    color: '#5A6B70',
-    marginRight: 6,
-  },
-  perfilBarValue: {
-    fontSize: 14,
-    color: '#2E7D8A',
-    fontWeight: 'bold',
-    flexShrink: 1,
-    maxWidth: 180,
-  },
-  perfilBarSwitch: {
-    fontSize: 12,
-    color: '#60A2AE',
-    marginLeft: 10,
-  },
-  scrollContent: {
-    alignItems: 'center',
-    paddingBottom: 20,
-  },
-  cardSpacing: {
-    marginBottom: 9,
-  },
-  cardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  cardImage: {
-    width: 83,
-    height: 83,
-    resizeMode: 'contain',
-    marginRight: 15,
-  },
-  cardTextContainer: {
-    flex: 1,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontFamily: 'System',
-    fontWeight: 'bold',
-    color: '#000',
-    marginBottom: 5,
-  },
-  cardDescription: {
-    fontSize: 14,
-    fontFamily: 'System',
-    color: '#000',
-    lineHeight: 20,
-  },
-  cardDetails: {
-    fontSize: 14,
-    fontFamily: 'System',
-    color: '#000',
-    lineHeight: 20,
-    marginBottom: 5,
-  },
-  highlight: {
-    color: '#C25B8C',
-    fontWeight: 'bold',
-  },
-  emptyListText: {
-    color: '#999',
-    marginTop: 40,
-    fontSize: 14,
-  },
-  fab: {
-    position: 'absolute',
-    bottom: 80,
-    alignSelf: 'center',
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#60A2AE',
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-  },
-  fabText: {
-    color: '#fff',
-    fontSize: 30,
-    lineHeight: 34,
-    fontWeight: 'bold',
+    backgroundColor: '#F0F4F8',
   },
 });
 

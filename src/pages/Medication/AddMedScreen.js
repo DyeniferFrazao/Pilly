@@ -165,8 +165,7 @@ const AddMedScreen = ({ route, navigation }) => {
   const handleSave = async () => {
     if (!nome.trim()) { Alert.alert('Atenção', 'Informe o nome do medicamento.'); return; }
     if (!perfilId) {
-      Alert.alert('Atenção', 'Selecione um perfil antes de continuar.');
-      navigation.navigate('User');
+      Alert.alert('Atenção', 'Erro ao identificar a conta. Tente novamente.');
       return;
     }
     if (alarmEnabled && horariosPreview.length === 0) {

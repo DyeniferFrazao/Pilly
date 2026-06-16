@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
 
 // Tabela `perfis`: precisa ser criada no Supabase com o SQL abaixo:
@@ -55,4 +56,42 @@ export async function excluirPerfil(perfilId) {
     .eq('id', perfilId);
 
   if (error) throw new Error(error.message);
+}
+
+// ─── Auto-perfil (uma conta = um perfil) ─────────────────────────────────────
+
+/**
+ * Garante que o usuário tem exatamente um perfil.
+ * Se ainda não existe, cria automaticamente usando o prefixo do e-mail.
+ * Salva perfilId e perfilNome no AsyncStorage.
+ *
+ * @returns {{ id: string, nome: string }}
+ */
+export async function garantirPerfilPadrao(userId, email = '') {
+  try {
+    const lista = await listarPerfis(userId);
+
+    if (lista.length > 0) {
+      const perfil = lista[0];
+      await AsyncStorage.setItem('perfilId',   perfil.id);
+      await AsyncStorage.setItem('perfilNome', perfil.nome ?? '');
+      return { id: perfil.id, nome: perfil.nome ?? '' };
+    }
+
+    // Cria o perfil padrão com nome derivado do e-mail
+    const nomePadrao = email.split('@')[0] ?? 'Usuário';
+    const perfil = await criarPerfil(userId, {
+      nome:     nomePadrao,
+      bio:      '',
+      foto_url: null,
+    });
+
+    await AsyncStorage.setItem('perfilId',   perfil.id);
+    await AsyncStorage.setItem('perfilNome', perfil.nome ?? '');
+    return { id: perfil.id, nome: perfil.nome ?? '' };
+  } catch {
+    // Fallback: usa o userId diretamente (evita travamento do app)
+    await AsyncStorage.setItem('perfilId', userId);
+    return { id: userId, nome: email.split('@')[0] ?? 'Usuário' };
+  }
 }

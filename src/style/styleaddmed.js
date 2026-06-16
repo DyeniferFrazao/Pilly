@@ -10,7 +10,7 @@ const styles = StyleSheet.create({
   header: {
     width: '100%',
     height: 57,
-    backgroundColor: '#60A2AE',
+    backgroundColor: '#1D6B78',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-start',
@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
   frequencyButton: {
     width: 312,
     height: 57,
-    backgroundColor: '#62A4B0',
+    backgroundColor: '#1D6B78',
     borderRadius: 25,
     justifyContent: 'center',
     alignItems: 'center',

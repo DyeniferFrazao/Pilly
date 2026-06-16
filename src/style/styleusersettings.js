@@ -3,12 +3,12 @@ import { StyleSheet } from 'react-native';
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F0F4F8',
   },
   header: {
     width: '100%',
     height: 57,
-    backgroundColor: '#60A2AE',
+    backgroundColor: '#1D6B78',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 10,
@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
   bottomBar: {
     width: '100%',
     height: 57,
-    backgroundColor: '#afd0d6',
+    backgroundColor: '#C8EDF2',
     position: 'absolute',
     bottom: 0,  // Fixa a barra no final da tela
   },
@@ -80,12 +80,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   logoutText: {
-    color: '#62A4B0', // Cor do texto em preto
+    color: '#1D6B78', // Cor do texto em preto
     fontSize: 20,
     marginLeft: 10, // Deu certo tudoooooo 
   },
   deleteText: {
-    color: '#62A4B0', // Cor do texto em preto
+    color: '#1D6B78', // Cor do texto em preto
     fontSize: 14,
     marginLeft: 39, // Deu certo tudoooooo 
     marginTop:-23,
@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 20,
     right: 20,
-    backgroundColor: '#62A4B0',
+    backgroundColor: '#1D6B78',
     borderRadius: 30,
     paddingVertical: 10,
     paddingHorizontal: 10,

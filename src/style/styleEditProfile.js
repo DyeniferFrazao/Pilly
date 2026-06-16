@@ -3,14 +3,14 @@ import { StyleSheet } from 'react-native';
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F0F4F8',
     justifyContent: 'center',
     alignItems: 'center', // Centraliza o conteúdo horizontalmente
   },
   header: {
     width: '100%',
     height: 57,
-    backgroundColor: '#60A2AE',
+    backgroundColor: '#1D6B78',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 10,
@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
   saveButton: {
     width: 300,
     height: 45,
-    backgroundColor: '#62A4B0',
+    backgroundColor: '#1D6B78',
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 25,
@@ -79,20 +79,20 @@ const styles = StyleSheet.create({
     height: 45,
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: '#62A4B0',
+    borderColor: '#1D6B78',
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 25,
     marginTop: 10,
   },
   cancelButtonText: {
-    color:  '#62A4B0',
+    color:  '#1D6B78',
     fontSize: 16,
   },
   deleteButton: {
     width: 200,
     height: 75,
-    backgroundColor: '#62A4B0',
+    backgroundColor: '#1D6B78',
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 40,

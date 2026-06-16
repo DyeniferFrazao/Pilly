@@ -9,14 +9,19 @@ import { cadastrar } from '../../services/authService';
 const SignUpScreen = ({ navigation }) => {
   const [isChecked, setChecked] = useState(false);
   const [nome, setNome] = useState('');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [confirmSenha, setConfirmSenha] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleCreateAccount = async () => {
-    if (!nome || !email || !senha || !confirmSenha) {
+    if (!nome || !username || !email || !senha || !confirmSenha) {
       Alert.alert('Atenção', 'Preencha todos os campos.');
+      return;
+    }
+    if (username.includes(' ')) {
+      Alert.alert('Atenção', 'O nome de usuário não pode conter espaços.');
       return;
     }
     if (senha !== confirmSenha) {
@@ -30,7 +35,7 @@ const SignUpScreen = ({ navigation }) => {
 
     setLoading(true);
     try {
-      await cadastrar(nome, email.trim(), senha);
+      await cadastrar(nome, username.trim().toLowerCase(), email.trim(), senha);
       Alert.alert('Conta criada!', 'Verifique seu e-mail para confirmar o cadastro.');
       navigation.navigate('Login');
     } catch (error) {
@@ -48,6 +53,14 @@ const SignUpScreen = ({ navigation }) => {
         placeholder="Nome completo"
         value={nome}
         onChangeText={setNome}
+        style={{ marginBottom: 15 }}
+        width={312}
+      />
+      <InputComponent
+        placeholder="Nome de usuário (sem espaços)"
+        autoCapitalize="none"
+        value={username}
+        onChangeText={setUsername}
         style={{ marginBottom: 15 }}
         width={312}
       />

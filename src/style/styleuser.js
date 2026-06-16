@@ -3,7 +3,7 @@ import { StyleSheet } from 'react-native';
 const styles = StyleSheet.create({
   container: {
     flex: 1,  // O conteúdo vai ocupar o restante do espaço
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F0F4F8',
     alignItems: 'center',
     paddingTop: 30,
     justifyContent: 'flex-start', // O conteúdo vai se alinhar no topo
@@ -12,7 +12,7 @@ const styles = StyleSheet.create({
   header: {
     width: '100%',
     height: 57,
-    backgroundColor: '#60A2AE',
+    backgroundColor: '#1D6B78',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 10,
@@ -32,7 +32,7 @@ const styles = StyleSheet.create({
   subHeader: {
     width: 80,
     height: 23,
-    backgroundColor: '#2E7D8A',
+    backgroundColor: '#1D6B78',
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 10,
@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
   // Bio do perfil — informação secundária
   bioText: {
     fontSize: 13,
-    color: '#2E7D8A',
+    color: '#1D6B78',
     marginTop: 6,
     marginLeft: 4,
   },
@@ -91,8 +91,8 @@ const styles = StyleSheet.create({
     width: 85,
     height: 20,
     borderWidth: 1,
-    borderColor: '#62A4B0',
-    color: '#8D989C',
+    borderColor: '#1D6B78',
+    color: '#4A7A82',
     textAlign: 'center',
     borderRadius: 50,
     marginBottom: 5,
@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
   addButton: {
     width: 200,
     height: 57,
-    backgroundColor: '#62A4B0',
+    backgroundColor: '#1D6B78',
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 10,

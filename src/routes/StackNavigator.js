@@ -8,13 +8,12 @@ import SignUpScreen from '../pages/Authentication/SignUpScreen';
 import HomeScreen from '../pages/Home/HomeScreen';
 import SettingScreen from '../pages/Configuration/SettingScreen';
 import UserSettings from '../pages/UserManagement/UserSettings';
-import UserScreen from '../pages/UserManagement/UserScreen';
-import AddUserScreen from '../pages/UserManagement/AddUserScreen';
 import AddMedScreen from '../pages/Medication/AddMedScreen';
+import MedicamentosScreen from '../pages/Medication/MedicamentosScreen';
 import MapScreen from '../pages/Map/MapScreen';
 import NotificationScreen from '../pages/Configuration/NotificationScreen';
-import EditProfileScreen from '../pages/UserManagement/EditProfileScreen';
 import AlarmScreen from '../pages/Configuration/AlarmScreen';
+import AvatarEditorScreen from '../pages/Avatar/AvatarEditorScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -24,7 +23,7 @@ const StackNavigator = () => {
   if (carregando) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#60A2AE" />
+        <ActivityIndicator size="large" color="#1D6B78" />
       </View>
     );
   }
@@ -38,16 +37,15 @@ const StackNavigator = () => {
         </>
       ) : (
         <>
-          <Stack.Screen name="User" component={UserScreen} />
           <Stack.Screen name="Home" component={HomeScreen} />
+          <Stack.Screen name="Medicamentos" component={MedicamentosScreen} />
           <Stack.Screen name="AddMedScreen" component={AddMedScreen} />
           <Stack.Screen name="AlarmScreen" component={AlarmScreen} />
           <Stack.Screen name="Notification" component={NotificationScreen} />
           <Stack.Screen name="Map" component={MapScreen} />
           <Stack.Screen name="Setting" component={SettingScreen} />
           <Stack.Screen name="UserSettings" component={UserSettings} />
-          <Stack.Screen name="AddUser" component={AddUserScreen} />
-          <Stack.Screen name="EditProfileScreen" component={EditProfileScreen} />
+          <Stack.Screen name="AvatarEditor" component={AvatarEditorScreen} />
         </>
       )}
     </Stack.Navigator>

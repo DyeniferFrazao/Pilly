@@ -13,11 +13,11 @@ async function registrarLog(userId, email, status) {
   });
 }
 
-export async function cadastrar(nome, email, senha) {
+export async function cadastrar(nome, username, email, senha) {
   const { data, error } = await supabase.auth.signUp({
     email,
     password: senha,
-    options: { data: { nome } },
+    options: { data: { nome, username } },
   });
 
   if (error) throw new Error(error.message);

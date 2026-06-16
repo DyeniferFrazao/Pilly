@@ -3,12 +3,12 @@ import { StyleSheet } from 'react-native';
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F0F4F8',
   },
   header: {
     width: '100%',
     height: 57,
-    backgroundColor: '#60A2AE',
+    backgroundColor: '#1D6B78',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 10,
@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
   addButton: {
     width: 182,
     height: 55,
-    backgroundColor: '#62A4B0',
+    backgroundColor: '#1D6B78',
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
     width: 182,
     height: 55,
     backgroundColor: 'transparent',
-    borderColor: '#62A4B0',
+    borderColor: '#1D6B78',
     borderWidth: 1,
     borderRadius: 10,
     justifyContent: 'center',
@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center', // Centraliza o botão abaixo do campo de bio
   },
   cancelButtonText: {
-    color: '#62A4B0',
+    color: '#1D6B78',
     fontWeight: 'bold',
   },
   modalContainer: {
@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   modalButton: {
-    backgroundColor: '#60A2AE',
+    backgroundColor: '#1D6B78',
     borderRadius: 5,
     padding: 10,
     marginVertical: 5,

@@ -12,11 +12,15 @@ import {
   Dimensions,
   Platform,
 } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Marker, PROVIDER_GOOGLE, PROVIDER_DEFAULT } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GOOGLE_MAPS_API_KEY } from '../../config';
+
+// iOS: usa Apple Maps (não requer GoogleMaps CocoaPod instalado)
+// Android: usa Google Maps (configurado via AndroidManifest meta-data)
+const MAP_PROVIDER = Platform.OS === 'android' ? PROVIDER_GOOGLE : PROVIDER_DEFAULT;
 
 const { width, height } = Dimensions.get('window');
 
@@ -61,7 +65,7 @@ const MapScreen = ({ navigation }) => {
         `&radius=5000` +
         `&type=pharmacy` +
         `&language=pt-BR` +
-        `&key=${AIzaSyCBMKCiDABaYr0d4L5FVT8gtaLPZFSF2Y8}`;
+        `&key=${GOOGLE_MAPS_API_KEY}`;
 
       const response = await fetch(url);
       const json     = await response.json();
@@ -196,7 +200,7 @@ const MapScreen = ({ navigation }) => {
       {/* Mapa */}
       <MapView
         ref={mapRef}
-        provider={PROVIDER_GOOGLE}
+        provider={MAP_PROVIDER}
         style={StyleSheet.absoluteFillObject}
         initialRegion={initialRegion}
         showsUserLocation
