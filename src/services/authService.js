@@ -1,5 +1,4 @@
 import { supabase } from '../lib/supabase';
-import { salvarSeguro, removerSeguro } from '../lib/secureStore';
 import * as Device from 'expo-device';
 
 async function registrarLog(userId, email, status) {
@@ -34,12 +33,7 @@ export async function login(email, senha) {
 
   await registrarLog(data.user.id, email, 'success').catch(() => {});
 
-  const session = data.session;
-  if (session) {
-    await salvarSeguro('access_token', session.access_token);
-    await salvarSeguro('refresh_token', session.refresh_token);
-  }
-
+  // O Supabase persiste a sessão internamente — nenhum armazenamento manual necessário
   return data;
 }
 
@@ -48,8 +42,6 @@ export async function logout() {
   if (user) {
     await registrarLog(user.id, user.email, 'logout').catch(() => {});
   }
-  await removerSeguro('access_token');
-  await removerSeguro('refresh_token');
   await supabase.auth.signOut();
 }
 

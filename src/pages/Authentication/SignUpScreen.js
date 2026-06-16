@@ -1,19 +1,22 @@
 import React, { useState } from 'react';
-import { View, Image, Switch, Text, Alert, ActivityIndicator } from 'react-native';
+import {
+  View, Image, Switch, Text, Alert, ActivityIndicator,
+  TouchableOpacity, StyleSheet, ScrollView, KeyboardAvoidingView, Platform,
+} from 'react-native';
 import InputComponent from '../../components/InputComponent';
-import PrimaryButton from '../../components/PrimaryButton';
-import TransparentButton from '../../components/TransparentButton';
-import styles from '../../style/stylesignup';
 import { cadastrar } from '../../services/authService';
 
+const TEAL      = '#1D6B78';
+const TEAL_SOFT = '#60A2AE';
+
 const SignUpScreen = ({ navigation }) => {
-  const [isChecked, setChecked] = useState(false);
-  const [nome, setNome] = useState('');
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [senha, setSenha] = useState('');
-  const [confirmSenha, setConfirmSenha] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [isChecked,    setChecked]    = useState(false);
+  const [nome,         setNome]        = useState('');
+  const [username,     setUsername]    = useState('');
+  const [email,        setEmail]       = useState('');
+  const [senha,        setSenha]       = useState('');
+  const [confirmSenha, setConfirmSenha]= useState('');
+  const [loading,      setLoading]     = useState(false);
 
   const handleCreateAccount = async () => {
     if (!nome || !username || !email || !senha || !confirmSenha) {
@@ -46,71 +49,96 @@ const SignUpScreen = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
-      <Image source={require('../../../assets/icons/icon.png')} style={styles.icon} />
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: '#F0F4F8' }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <ScrollView
+        contentContainerStyle={S.container}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <Image source={require('../../../assets/icons/icon.png')} style={S.icon} />
 
-      <InputComponent
-        placeholder="Nome completo"
-        value={nome}
-        onChangeText={setNome}
-        style={{ marginBottom: 15 }}
-        width={312}
-      />
-      <InputComponent
-        placeholder="Nome de usuário (sem espaços)"
-        autoCapitalize="none"
-        value={username}
-        onChangeText={setUsername}
-        style={{ marginBottom: 15 }}
-        width={312}
-      />
-      <InputComponent
-        placeholder="E-mail"
-        keyboardType="email-address"
-        autoCapitalize="none"
-        value={email}
-        onChangeText={setEmail}
-        style={{ marginBottom: 15 }}
-        width={312}
-      />
-      <InputComponent
-        placeholder="Senha"
-        secureTextEntry
-        value={senha}
-        onChangeText={setSenha}
-        style={{ marginBottom: 15 }}
-        width={312}
-      />
-      <InputComponent
-        placeholder="Confirmar senha"
-        secureTextEntry
-        value={confirmSenha}
-        onChangeText={setConfirmSenha}
-        style={{ marginBottom: 15 }}
-        width={312}
-      />
+        <InputComponent placeholder="Nome completo"           value={nome}         onChangeText={setNome}         width={312} height={47} marginVertical={7} />
+        <InputComponent placeholder="Nome de usuário"         value={username}     onChangeText={setUsername}     width={312} height={47} marginVertical={7} autoCapitalize="none" />
+        <InputComponent placeholder="E-mail"                  value={email}        onChangeText={setEmail}        width={312} height={47} marginVertical={7} keyboardType="email-address" autoCapitalize="none" />
+        <InputComponent placeholder="Senha"                   value={senha}        onChangeText={setSenha}        width={312} height={47} marginVertical={7} secureTextEntry />
+        <InputComponent placeholder="Confirmar senha"         value={confirmSenha} onChangeText={setConfirmSenha} width={312} height={47} marginVertical={7} secureTextEntry />
 
-      <View style={styles.switchContainer}>
-        <Switch value={isChecked} onValueChange={setChecked} style={styles.switch} />
-        <Text style={styles.switchLabelText}>Eu aceito os termos de uso</Text>
-      </View>
+        <View style={S.switchRow}>
+          <Switch
+            value={isChecked}
+            onValueChange={setChecked}
+            trackColor={{ false: '#D5E8EA', true: '#A8D5DC' }}
+            thumbColor={isChecked ? TEAL : '#B0C4C8'}
+          />
+          <Text style={S.switchLabel}>Eu aceito os termos de uso</Text>
+        </View>
 
-      <View style={styles.primaryButtonContainer}>
         {loading ? (
-          <ActivityIndicator size="large" color="#60A2AE" />
+          <ActivityIndicator size="large" color={TEAL_SOFT} style={{ marginVertical: 16 }} />
         ) : (
-          <PrimaryButton title="Confirmar" onPress={handleCreateAccount} />
+          <TouchableOpacity style={S.btnPrimary} onPress={handleCreateAccount} activeOpacity={0.85}>
+            <Text style={S.btnPrimaryText}>Confirmar</Text>
+          </TouchableOpacity>
         )}
-      </View>
 
-      <View style={styles.transparentButtonContainer}>
-        <TransparentButton
-          title="Já tenho uma conta"
+        <TouchableOpacity
+          style={S.btnTransparent}
           onPress={() => navigation.navigate('Login')}
-        />
-      </View>
-    </View>
+          activeOpacity={0.7}
+        >
+          <Text style={S.btnTransparentText}>Já tenho uma conta</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
+
+const S = StyleSheet.create({
+  container: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 48,
+    paddingHorizontal: 24,
+  },
+  icon: {
+    width: 80,
+    height: 80,
+    resizeMode: 'contain',
+    marginBottom: 24,
+  },
+  switchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginVertical: 14,
+    alignSelf: 'flex-start',
+    marginLeft: 4,
+  },
+  switchLabel: { fontSize: 13, color: '#4A6B70' },
+  btnPrimary: {
+    width: 312,
+    height: 48,
+    backgroundColor: TEAL,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  btnPrimaryText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  btnTransparent: {
+    marginTop: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+  },
+  btnTransparentText: { fontSize: 14, color: TEAL_SOFT, fontWeight: '600' },
+});
 
 export default SignUpScreen;

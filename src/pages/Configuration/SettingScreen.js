@@ -83,15 +83,17 @@ const SettingScreen = ({ navigation }) => {
         <View style={S.accountAvatar}>
           <Feather name="user" size={26} color="#1D6B78" />
         </View>
-        <View>
-          <Text style={S.accountEmail} numberOfLines={1}>
-            {user?.user_metadata?.username
-              ? `@${user.user_metadata.username}`
-              : user?.email ?? '—'}
+        <View style={{ flex: 1 }}>
+          {/* Nome em destaque (topo) */}
+          <Text style={S.accountNome} numberOfLines={1}>
+            {user?.user_metadata?.nome || user?.email?.split('@')[0] || 'Usuário'}
           </Text>
-          <Text style={S.accountSub}>
-            {user?.user_metadata?.username ? user.email : 'Conta Pilly'}
-          </Text>
+          {/* @username abaixo, menor */}
+          {user?.user_metadata?.username ? (
+            <Text style={S.accountUsername}>@{user.user_metadata.username}</Text>
+          ) : (
+            <Text style={S.accountSub}>{user?.email ?? 'Conta Pilly'}</Text>
+          )}
         </View>
       </View>
 
@@ -114,7 +116,7 @@ const SettingScreen = ({ navigation }) => {
           <OpcaoRow
             icon="user"
             label="Dados da conta"
-            sub="E-mail, foto, segurança"
+            sub="Nome, usuário, e-mail e segurança"
             onPress={() => navigation.navigate('UserSettings', {})}
           />
           <View style={S.divider} />
@@ -188,8 +190,9 @@ const S = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  accountEmail: { fontSize: 15, fontWeight: '600', color: '#1A3A40', maxWidth: 220 },
-  accountSub:   { fontSize: 12, color: '#7AABB5', marginTop: 2 },
+  accountNome:     { fontSize: 16, fontWeight: '700', color: '#1A3A40' },
+  accountUsername: { fontSize: 12, fontWeight: '600', color: '#1D6B78', marginTop: 3 },
+  accountSub:      { fontSize: 12, color: '#7AABB5', marginTop: 3 },
 
   body: { flex: 1, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 90 },
 

@@ -16,9 +16,26 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { scheduleAlarms } from '../../services/alarmService';
-import styles from '../../style/stylealarm';
 
-const INTERVALOS = [2, 3, 4, 6, 8, 12];
+const INTERVALOS = [4, 6, 8, 12, 24];
+
+// Estilos inline (arquivo de estilo externo foi removido na limpeza)
+const styles = {
+  container:       { flex: 1, backgroundColor: '#F0F4F8' },
+  cardContainer:   { flex: 1, padding: 20 },
+  title:           { fontSize: 16, fontWeight: '700', color: '#1A3A40', marginBottom: 12 },
+  subtitle:        { fontSize: 13, color: '#7AABB5', marginBottom: 6 },
+  timeDisplay:     { backgroundColor: '#1D6B78', borderRadius: 12, padding: 14, alignItems: 'center', marginBottom: 16 },
+  timeText:        { fontSize: 22, fontWeight: 'bold', color: '#fff' },
+  intervals:       { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
+  intervalButton:  { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: '#E0EDF0' },
+  selectedButton:  { backgroundColor: '#1D6B78' },
+  intervalText:    { fontSize: 14, fontWeight: '600', color: '#1A3A40' },
+  alarm:           { fontSize: 14, color: '#1A3A40', paddingVertical: 4 },
+  buttonContainer: { flexDirection: 'row', gap: 12, marginTop: 20 },
+  button:          { flex: 1, backgroundColor: '#1D6B78', borderRadius: 12, padding: 14, alignItems: 'center' },
+  buttonText:      { color: '#fff', fontWeight: '700' },
+};
 
 const AlarmScreen = () => {
   const navigation = useNavigation();

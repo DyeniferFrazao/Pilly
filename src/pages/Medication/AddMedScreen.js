@@ -25,7 +25,9 @@ const DURACAO_TIPOS = [
   { valor: 'indeterminado', label: 'Indeterminado', temQuantidade: false },
 ];
 
-const INTERVALOS = [2, 3, 4, 6, 8, 12];
+const INTERVALOS = [4, 6, 8, 12, 24];
+
+const UNIDADES = ['mg', 'g', 'mcg', 'ml', 'L', 'UI', 'comp', 'cáp', 'gt', '%'];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -38,6 +40,12 @@ function formatarDuracao(tipo, valor) {
 }
 
 function calcularHorarios(baseTime, intervaloHoras) {
+  // Para 24h: gera apenas 1 alarme diário (o horário da primeira dose)
+  if (intervaloHoras === 24) {
+    const t = new Date(baseTime);
+    t.setHours(t.getHours() + 24);
+    return [t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })];
+  }
   return Array.from({ length: 4 }, (_, i) => {
     const t = new Date(baseTime);
     t.setHours(t.getHours() + intervaloHoras * (i + 1));
@@ -131,6 +139,7 @@ const AddMedScreen = ({ route, navigation }) => {
 
   const [showTimePicker,   setShowTimePicker]   = useState(false);
   const [openTypeModal,    setOpenTypeModal]    = useState(false);
+  const [openUnidadeModal, setOpenUnidadeModal] = useState(false);
   const [openDuracaoModal, setOpenDuracaoModal] = useState(false);
   const [openAlarmModal,   setOpenAlarmModal]   = useState(false);
   const [loading,          setLoading]          = useState(false);
@@ -312,14 +321,16 @@ const AddMedScreen = ({ route, navigation }) => {
             height={48}
             marginVertical={6}
           />
-          <InputComponent
-            placeholder="Unidade  (mg, ml…)"
-            value={unidade}
-            onChangeText={setUnidade}
-            width={LARGURA / 2 - 6}
-            height={48}
-            marginVertical={6}
-          />
+          <TouchableOpacity
+            style={[comp.pickerRow, { width: LARGURA / 2 - 6, marginVertical: 6 }]}
+            onPress={() => setOpenUnidadeModal(true)}
+            activeOpacity={0.7}
+          >
+            <Text style={[comp.pickerText, !unidade && comp.pickerPlaceholder]}>
+              {unidade || 'Unidade'}
+            </Text>
+            <Feather name="chevron-down" size={18} color="#999" />
+          </TouchableOpacity>
         </View>
 
         {/* ── SEÇÃO 3: Estoque ───────────────────────────────────────────── */}
@@ -435,6 +446,28 @@ const AddMedScreen = ({ route, navigation }) => {
               </TouchableOpacity>
             ))}
             <TouchableOpacity style={ms.btnGhostFull} onPress={() => setOpenTypeModal(false)}>
+              <Text style={ms.btnGhostText}>Fechar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── MODAL: Unidade de medida ───────────────────────────────────── */}
+      <Modal transparent visible={openUnidadeModal} animationType="fade" onRequestClose={() => setOpenUnidadeModal(false)}>
+        <View style={ms.overlay}>
+          <View style={ms.card}>
+            <Text style={ms.title}>Unidade de medida</Text>
+            {UNIDADES.map(u => (
+              <TouchableOpacity
+                key={u}
+                style={[ms.optionRow, unidade === u && ms.optionRowActive]}
+                onPress={() => { setUnidade(u); setOpenUnidadeModal(false); }}
+              >
+                <Text style={[ms.optionText, unidade === u && ms.optionTextActive]}>{u}</Text>
+                {unidade === u ? <Feather name="check" size={16} color="#60A2AE" /> : null}
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity style={ms.btnGhostFull} onPress={() => setOpenUnidadeModal(false)}>
               <Text style={ms.btnGhostText}>Fechar</Text>
             </TouchableOpacity>
           </View>

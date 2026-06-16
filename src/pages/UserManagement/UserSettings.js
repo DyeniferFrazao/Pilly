@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import {
   View, Text, TouchableOpacity, Alert, StyleSheet,
-  ScrollView, ActivityIndicator,
+  ScrollView, ActivityIndicator, Modal, TextInput, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import * as ImagePicker from 'expo-image-picker';
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../../contexts/AuthContext';
@@ -40,10 +39,16 @@ const OpcaoRow = ({ icon, label, sub, onPress, danger = false }) => (
 // ─── Tela ─────────────────────────────────────────────────────────────────────
 const UserSettings = ({ navigation }) => {
   const { user } = useAuth();
-  const [sendingReset, setSendingReset] = useState(false);
+  const [sendingReset,   setSendingReset]   = useState(false);
+  const [openEditModal,  setOpenEditModal]  = useState(false);
+  const [savingProfile,  setSavingProfile]  = useState(false);
+  const [editNome,       setEditNome]       = useState(user?.user_metadata?.nome     ?? '');
+  const [editUsername,   setEditUsername]   = useState(user?.user_metadata?.username ?? '');
 
-  const email = user?.email ?? '';
+  const email    = user?.email ?? '';
   const criadoEm = formatarData(user?.created_at);
+  const nomeFmt  = user?.user_metadata?.nome     || email.split('@')[0];
+  const userFmt  = user?.user_metadata?.username ? `@${user.user_metadata.username}` : null;
 
   // ── Alterar senha via e-mail ───────────────────────────────────────────────
   const handleResetPassword = async () => {
@@ -60,6 +65,30 @@ const UserSettings = ({ navigation }) => {
       Alert.alert('Erro', err.message || 'Não foi possível enviar o e-mail.');
     } finally {
       setSendingReset(false);
+    }
+  };
+
+  // ── Salvar nome + username ────────────────────────────────────────────────
+  const handleSaveProfile = async () => {
+    const nomeTrimmed = editNome.trim();
+    const userTrimmed = editUsername.trim().toLowerCase().replace(/\s+/g, '');
+    if (!nomeTrimmed) { Alert.alert('Atenção', 'O nome não pode ficar em branco.'); return; }
+    if (userTrimmed && !/^[a-z0-9._]+$/.test(userTrimmed)) {
+      Alert.alert('Atenção', 'O usuário só pode ter letras, números, ponto e underscore.');
+      return;
+    }
+    setSavingProfile(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: { nome: nomeTrimmed, username: userTrimmed || null },
+      });
+      if (error) throw error;
+      setOpenEditModal(false);
+      Alert.alert('Perfil atualizado', 'Suas informações foram salvas com sucesso.');
+    } catch (err) {
+      Alert.alert('Erro', err.message || 'Não foi possível salvar as alterações.');
+    } finally {
+      setSavingProfile(false);
     }
   };
 
@@ -96,13 +125,29 @@ const UserSettings = ({ navigation }) => {
         showsVerticalScrollIndicator={false}
       >
 
-        {/* Avatar + email */}
+        {/* Avatar + nome + username */}
         <View style={S.avatarSection}>
           <View style={S.avatarCircle}>
             <Text style={S.avatarText}>{iniciais(email)}</Text>
           </View>
-          <Text style={S.emailText}>{email}</Text>
-          <Text style={S.criadoText}>Conta criada em {criadoEm}</Text>
+          <Text style={S.emailText}>{nomeFmt}</Text>
+          {userFmt && <Text style={S.usernameText}>{userFmt}</Text>}
+          <Text style={S.criadoText}>{email} · Conta criada em {criadoEm}</Text>
+        </View>
+
+        {/* Seção Perfil */}
+        <Text style={S.secLabel}>Perfil</Text>
+        <View style={S.section}>
+          <OpcaoRow
+            icon="edit-2"
+            label="Editar perfil"
+            sub="Nome e nome de usuário (@)"
+            onPress={() => {
+              setEditNome(user?.user_metadata?.nome ?? '');
+              setEditUsername(user?.user_metadata?.username ?? '');
+              setOpenEditModal(true);
+            }}
+          />
         </View>
 
         {/* Seção Segurança */}
@@ -142,6 +187,75 @@ const UserSettings = ({ navigation }) => {
         </View>
 
       </ScrollView>
+
+      {/* ── Modal de edição de perfil ───────────────────────────────────── */}
+      <Modal
+        transparent
+        animationType="slide"
+        visible={openEditModal}
+        onRequestClose={() => setOpenEditModal(false)}
+      >
+        <KeyboardAvoidingView
+          style={S.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <TouchableOpacity
+            style={{ flex: 1 }}
+            activeOpacity={1}
+            onPress={() => setOpenEditModal(false)}
+          />
+          <View style={S.modalSheet}>
+            <View style={S.modalHandle} />
+            <Text style={S.modalTitle}>Editar perfil</Text>
+
+            <Text style={S.fieldLabel}>Nome</Text>
+            <TextInput
+              style={S.textInput}
+              value={editNome}
+              onChangeText={setEditNome}
+              placeholder="Seu nome completo"
+              placeholderTextColor="#B0C4C8"
+              autoCapitalize="words"
+              returnKeyType="next"
+            />
+
+            <Text style={S.fieldLabel}>Nome de usuário</Text>
+            <View style={S.usernameRow}>
+              <Text style={S.usernameAt}>@</Text>
+              <TextInput
+                style={[S.textInput, { flex: 1 }]}
+                value={editUsername}
+                onChangeText={(t) => setEditUsername(t.toLowerCase().replace(/\s/g, ''))}
+                placeholder="seunome"
+                placeholderTextColor="#B0C4C8"
+                autoCapitalize="none"
+                autoCorrect={false}
+                returnKeyType="done"
+              />
+            </View>
+            <Text style={S.fieldHint}>Letras, números, ponto e underscore apenas.</Text>
+
+            <TouchableOpacity
+              style={[S.btnPrimary, savingProfile && { opacity: 0.6 }]}
+              onPress={handleSaveProfile}
+              disabled={savingProfile}
+              activeOpacity={0.8}
+            >
+              {savingProfile
+                ? <ActivityIndicator size="small" color="#fff" />
+                : <Text style={S.btnPrimaryText}>Salvar</Text>
+              }
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={S.btnGhost}
+              onPress={() => setOpenEditModal(false)}
+            >
+              <Text style={S.btnGhostText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
     </SafeAreaView>
   );
 };
@@ -181,9 +295,10 @@ const S = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
-  avatarText: { fontSize: 28, fontWeight: 'bold', color: '#1D6B78' },
-  emailText:  { fontSize: 16, fontWeight: '600', color: '#1A3A40', marginBottom: 4 },
-  criadoText: { fontSize: 12, color: '#7AABB5' },
+  avatarText:    { fontSize: 28, fontWeight: 'bold', color: '#1D6B78' },
+  emailText:     { fontSize: 17, fontWeight: '700', color: '#1A3A40', marginBottom: 2 },
+  usernameText:  { fontSize: 13, fontWeight: '600', color: '#1D6B78', marginBottom: 4 },
+  criadoText:    { fontSize: 11, color: '#7AABB5', textAlign: 'center' },
 
   // Rótulo de seção
   secLabel: {
@@ -239,6 +354,50 @@ const S = StyleSheet.create({
     paddingBottom: 12,
   },
   sendingText: { fontSize: 12, color: '#7AABB5' },
+
+  // Modal de edição
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    paddingBottom: 36,
+    gap: 10,
+  },
+  modalHandle: {
+    width: 40, height: 4, backgroundColor: '#D5E8EA',
+    borderRadius: 2, alignSelf: 'center', marginBottom: 8,
+  },
+  modalTitle: { fontSize: 17, fontWeight: '800', color: '#1A3A40', textAlign: 'center', marginBottom: 6 },
+  fieldLabel: { fontSize: 12, fontWeight: '700', color: '#7AABB5', textTransform: 'uppercase', letterSpacing: 0.4, marginTop: 6 },
+  fieldHint:  { fontSize: 11, color: '#B0C4C8', marginTop: -4 },
+  textInput: {
+    backgroundColor: '#F0F4F8',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: '#1A3A40',
+    borderWidth: 0.5,
+    borderColor: '#D5E8EA',
+  },
+  usernameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  usernameAt:  { fontSize: 16, fontWeight: '700', color: '#1D6B78' },
+  btnPrimary: {
+    backgroundColor: '#1D6B78',
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  btnPrimaryText: { color: '#fff', fontSize: 14, fontWeight: '700' },
+  btnGhost: { paddingVertical: 12, alignItems: 'center' },
+  btnGhostText: { fontSize: 14, fontWeight: '600', color: '#7AABB5' },
 
   // Card de informações
   infoCard: {

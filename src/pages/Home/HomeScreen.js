@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef } from 'react';
 import {
-  View, Text, ScrollView, Alert,
+  View, Text, ScrollView, Alert, Modal,
   TouchableOpacity, StyleSheet,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -9,7 +9,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import FooterNavigation from '../../components/FooterNavigation';
 import AvatarComponent from '../../components/AvatarComponent';
-import ModalComponent from '../../components/ModalComponent';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   listarMedicamentos,
@@ -142,6 +141,108 @@ const AnelProgresso = ({ tomadas, total, size = 80 }) => {
   );
 };
 
+// ─── Modal de detalhe do medicamento (inline, substituindo ModalComponent) ────
+const MedDetailModal = ({ visible, medication: med, onClose, navigation, onDelete, onRefresh, perfilNome }) => {
+  if (!med) return null;
+
+  const doseStr     = med.dose ? `${med.dose}${med.unidade ? ' ' + med.unidade : ''}` : null;
+  const horasStr    = Array.isArray(med.horarios) && med.horarios.length > 0 ? med.horarios.join(' · ') : null;
+  const duracaoStr  = med.duracao_tipo || null;
+
+  const handleEdit = () => {
+    onClose();
+    navigation.navigate('AddMedScreen', { medicamento: med, perfilNome });
+  };
+
+  const confirmDelete = () => {
+    Alert.alert(
+      'Remover medicamento',
+      `Deseja remover "${med.nome}"? Os alarmes também serão cancelados.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Remover', style: 'destructive', onPress: () => onDelete(med.id) },
+      ]
+    );
+  };
+
+  return (
+    <Modal transparent animationType="slide" visible={visible} onRequestClose={onClose}>
+      <TouchableOpacity style={md.overlay} activeOpacity={1} onPress={onClose}>
+        <TouchableOpacity activeOpacity={1} style={md.sheet}>
+          <View style={md.handle} />
+
+          {/* Nome + tipo */}
+          <Text style={md.nome}>{med.nome}</Text>
+          {med.tipo ? <Text style={md.tipo}>{med.tipo}</Text> : null}
+
+          {/* Linha de infos */}
+          <View style={md.infoBox}>
+            {doseStr  && <InfoPill icon="package"  label={doseStr} />}
+            {horasStr && <InfoPill icon="clock"     label={horasStr} />}
+            {med.via  && <InfoPill icon="navigation" label={med.via} />}
+            {duracaoStr && <InfoPill icon="calendar" label={duracaoStr} />}
+          </View>
+
+          {med.principio ? (
+            <Text style={md.principio}>{med.principio}</Text>
+          ) : null}
+
+          {med.observacoes ? (
+            <View style={md.obsBox}>
+              <Feather name="info" size={13} color="#7AABB5" />
+              <Text style={md.obs}>{med.observacoes}</Text>
+            </View>
+          ) : null}
+
+          {/* Ações */}
+          <View style={md.actions}>
+            <TouchableOpacity style={md.btnEdit} onPress={handleEdit} activeOpacity={0.8}>
+              <Feather name="edit-2" size={15} color="#1D6B78" />
+              <Text style={md.btnEditText}>Editar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={md.btnDelete} onPress={confirmDelete} activeOpacity={0.8}>
+              <Feather name="trash-2" size={15} color="#C0392B" />
+              <Text style={md.btnDeleteText}>Remover</Text>
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity style={md.btnClose} onPress={onClose}>
+            <Text style={md.btnCloseText}>Fechar</Text>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </TouchableOpacity>
+    </Modal>
+  );
+};
+
+const InfoPill = ({ icon, label }) => (
+  <View style={md.pill}>
+    <Feather name={icon} size={12} color="#1D6B78" />
+    <Text style={md.pillText}>{label}</Text>
+  </View>
+);
+
+const md = StyleSheet.create({
+  overlay:  { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+  sheet:    { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 36, gap: 10 },
+  handle:   { width: 40, height: 4, backgroundColor: '#D5E8EA', borderRadius: 2, alignSelf: 'center', marginBottom: 6 },
+  nome:     { fontSize: 18, fontWeight: '800', color: '#1A3A40' },
+  tipo:     { fontSize: 13, color: '#7AABB5', marginTop: -4 },
+  infoBox:  { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
+  pill:     { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#EAF5F7', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5 },
+  pillText: { fontSize: 12, color: '#1D6B78', fontWeight: '600' },
+  principio:{ fontSize: 13, color: '#4A6B70', fontStyle: 'italic' },
+  obsBox:   { flexDirection: 'row', alignItems: 'flex-start', gap: 6, backgroundColor: '#F7FBFC', borderRadius: 10, padding: 10 },
+  obs:      { fontSize: 12, color: '#7AABB5', flex: 1 },
+  actions:  { flexDirection: 'row', gap: 10, marginTop: 6 },
+  btnEdit:  { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#EAF5F7', borderRadius: 14, paddingVertical: 13 },
+  btnEditText:   { fontSize: 14, fontWeight: '700', color: '#1D6B78' },
+  btnDelete:     { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#FCEBEB', borderRadius: 14, paddingVertical: 13 },
+  btnDeleteText: { fontSize: 14, fontWeight: '700', color: '#C0392B' },
+  btnClose:      { alignItems: 'center', paddingVertical: 10 },
+  btnCloseText:  { fontSize: 14, color: '#7AABB5', fontWeight: '600' },
+});
+
 // ─── Componente: Card de usuário na arena ────────────────────────────────────
 const iniciaisArena = (apelido = '') =>
   apelido.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('');
@@ -267,22 +368,40 @@ const CalendarioSemana = ({ dados }) => (
 const CORES_MISSAO = ['#1D6B78', '#D4537E', '#BA7517', '#7F77DD', '#3B6D11'];
 const BG_MISSAO    = ['#C8EDF2', '#F4C0D1', '#FAC775', '#CECBF6', '#C0DD97'];
 
-const MissaoItem = ({ med, idx, tomado, onPress, onCheck }) => {
+/** Retorna o próximo horário pendente (string HH:MM) dado quantas doses já foram tomadas */
+const proximoHorario = (horarios, dosesTomadas) => {
+  if (!Array.isArray(horarios) || horarios.length === 0) return null;
+  const sorted = [...horarios].sort(); // HH:MM sort alfabético = cronológico
+  const i = Math.min(dosesTomadas, sorted.length - 1);
+  return sorted[i];
+};
+
+const MissaoItem = ({ med, idx, dosesTomadas, onPress, onCheck, onNaoTomado }) => {
   const cor = CORES_MISSAO[idx % CORES_MISSAO.length];
   const bg  = BG_MISSAO[idx % BG_MISSAO.length];
 
-  const horariosStr =
-    Array.isArray(med.horarios) && med.horarios.length > 0
-      ? med.horarios.join(', ')
-      : null;
-  const doseStr = med.dose
-    ? `${med.dose}${med.unidade ? ' ' + med.unidade : ''}`
-    : null;
+  const total       = Math.max(1, med.horarios?.length ?? 0);
+  const todosFeitos = dosesTomadas >= total;
+  const proximo     = proximoHorario(med.horarios, dosesTomadas);
+  const doseStr     = med.dose ? `${med.dose}${med.unidade ? ' ' + med.unidade : ''}` : null;
+
+  const subText = [
+    doseStr,
+    !todosFeitos && proximo ? `próximo: ${proximo}` : null,
+    `${Math.min(dosesTomadas, total)}/${total}`,
+  ].filter(Boolean).join(' · ');
 
   return (
     <TouchableOpacity
-      style={[miss.item, tomado && miss.itemTomado]}
+      style={[miss.item, todosFeitos && miss.itemTomado]}
       onPress={onPress}
+      onLongPress={() => {
+        if (todosFeitos) return;
+        Alert.alert(med.nome, 'O que deseja fazer?', [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Não tomei (pular)', onPress: onNaoTomado, style: 'destructive' },
+        ]);
+      }}
       activeOpacity={0.75}
     >
       {/* Ícone */}
@@ -293,9 +412,7 @@ const MissaoItem = ({ med, idx, tomado, onPress, onCheck }) => {
       {/* Textos */}
       <View style={miss.info}>
         <Text style={miss.nome}>{med.nome}</Text>
-        <Text style={miss.sub} numberOfLines={1}>
-          {[doseStr, horariosStr].filter(Boolean).join(' · ')}
-        </Text>
+        <Text style={miss.sub} numberOfLines={1}>{subText}</Text>
       </View>
 
       {/* Checkbox — toque separado para registrar dose sem abrir o modal */}
@@ -303,10 +420,10 @@ const MissaoItem = ({ med, idx, tomado, onPress, onCheck }) => {
         onPress={onCheck}
         hitSlop={10}
         activeOpacity={0.7}
-        disabled={tomado}
-        style={[miss.check, tomado && { backgroundColor: cor, borderColor: cor }]}
+        disabled={todosFeitos}
+        style={[miss.check, todosFeitos && { backgroundColor: cor, borderColor: cor }]}
       >
-        {tomado && <Feather name="check" size={12} color="#fff" />}
+        {todosFeitos && <Feather name="check" size={12} color="#fff" />}
       </TouchableOpacity>
     </TouchableOpacity>
   );
@@ -373,7 +490,7 @@ const HomeScreen = ({ navigation, route }) => {
 
   const [dosesTomadas,   setDosesTomadas]   = useState(0);
   const [dosesTotal,     setDosesTotal]     = useState(0);
-  const [dosesHojeMap,   setDosesHojeMap]   = useState({});  // { [medicamento_id]: true }
+  const [dosesHojeMap,   setDosesHojeMap]   = useState({});  // { [medicamento_id]: countTomadas }
 
   const [gamificacao,       setGamificacao]       = useState(null);
   const [arenaData,         setArenaData]         = useState([]);   // usuários do leaderboard
@@ -426,10 +543,12 @@ const HomeScreen = ({ navigation, route }) => {
       setDosesTotal(totalProg);
       setDosesTomadas(tomadas);
 
-      // Mapa de quais medicamentos foram tomados hoje
+      // Mapa de quantas doses foram tomadas hoje por medicamento
       const mapaHoje = {};
       for (const d of dosesHoje ?? []) {
-        if (d.status === 'tomado') mapaHoje[d.medicamento_id] = true;
+        if (d.status === 'tomado') {
+          mapaHoje[d.medicamento_id] = (mapaHoje[d.medicamento_id] ?? 0) + 1;
+        }
       }
       setDosesHojeMap(mapaHoje);
 
@@ -488,10 +607,12 @@ const HomeScreen = ({ navigation, route }) => {
 
   // ── Registrar dose diretamente pelo checkbox da missão ────────────────────────
   const handleCheckDose = async (med) => {
-    if (dosesHojeMap[med.id]) return; // já registrada — nada a fazer
+    const tomadas = dosesHojeMap[med.id] ?? 0;
+    const total   = Math.max(1, med.horarios?.length ?? 0);
+    if (tomadas >= total) return; // todas as doses já registradas
 
-    // Atualização otimista: marca como tomado imediatamente na UI
-    setDosesHojeMap((prev) => ({ ...prev, [med.id]: true }));
+    // Atualização otimista
+    setDosesHojeMap((prev) => ({ ...prev, [med.id]: (prev[med.id] ?? 0) + 1 }));
     setDosesTomadas((prev) => prev + 1);
 
     try {
@@ -522,14 +643,19 @@ const HomeScreen = ({ navigation, route }) => {
       }).catch(() => {});
     } catch {
       // Reverte em caso de falha
-      setDosesHojeMap((prev) => {
-        const next = { ...prev };
-        delete next[med.id];
-        return next;
-      });
+      setDosesHojeMap((prev) => ({ ...prev, [med.id]: Math.max(0, (prev[med.id] ?? 0) - 1) }));
       setDosesTomadas((prev) => Math.max(0, prev - 1));
       Alert.alert('Erro', 'Não foi possível registrar a dose.');
     }
+  };
+
+  // ── Pular dose (sem XP, sem penalidade no ranking) ───────────────────────────
+  const handleNaoTomado = (med) => {
+    const tomadas = dosesHojeMap[med.id] ?? 0;
+    const total   = Math.max(1, med.horarios?.length ?? 0);
+    if (tomadas >= total) return;
+    // Avança o contador localmente apenas — não chama API, não gera XP
+    setDosesHojeMap((prev) => ({ ...prev, [med.id]: (prev[med.id] ?? 0) + 1 }));
   };
 
   // ── Dados derivados ───────────────────────────────────────────────────────────
@@ -588,17 +714,19 @@ const HomeScreen = ({ navigation, route }) => {
               <Feather name="award" size={14} color="#BA7517" />
               <Text style={S.sectionTitle}> Ranking Pilly</Text>
             </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View style={{ flexDirection: 'row', paddingVertical: 4 }}>
-                {arenaData.map((u, i) => (
-                  <ArenaCard
-                    key={u.user_id}
-                    usuario={u}
-                    posicao={i + 1}
-                    euSou={u.user_id === user?.id}
-                  />
-                ))}
-              </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ flexDirection: 'row', paddingTop: 18, paddingBottom: 4 }}
+            >
+              {arenaData.map((u, i) => (
+                <ArenaCard
+                  key={u.user_id}
+                  usuario={u}
+                  posicao={i + 1}
+                  euSou={u.user_id === user?.id}
+                />
+              ))}
             </ScrollView>
           </View>
         )}
@@ -682,12 +810,13 @@ const HomeScreen = ({ navigation, route }) => {
                 key={med.id}
                 med={med}
                 idx={idx}
-                tomado={!!dosesHojeMap[med.id]}
+                dosesTomadas={dosesHojeMap[med.id] ?? 0}
                 onPress={() => {
                   setSelectedMedication(med);
                   setModalVisible(true);
                 }}
                 onCheck={() => handleCheckDose(med)}
+                onNaoTomado={() => handleNaoTomado(med)}
               />
             ))
           ) : (
@@ -721,17 +850,15 @@ const HomeScreen = ({ navigation, route }) => {
       <FooterNavigation />
 
       {/* ── Modal de detalhe do medicamento ─────────────────────────────────── */}
-      {selectedMedication && (
-        <ModalComponent
-          visible={modalVisible}
-          medication={selectedMedication}
-          onClose={() => setModalVisible(false)}
-          navigation={navigation}
-          onDelete={handleDelete}
-          onRefresh={fetchDados}
-          perfilNome={perfilNome}
-        />
-      )}
+      <MedDetailModal
+        visible={modalVisible}
+        medication={selectedMedication}
+        onClose={() => setModalVisible(false)}
+        navigation={navigation}
+        onDelete={handleDelete}
+        onRefresh={fetchDados}
+        perfilNome={perfilNome}
+      />
     </SafeAreaView>
   );
 };
@@ -889,10 +1016,13 @@ const arena = StyleSheet.create({
     borderWidth: 0.5,
     borderColor: '#D5E8EA',
     padding: 10,
+    paddingTop: 12,
     alignItems: 'center',
     marginRight: 8,
     gap: 5,
     position: 'relative',
+    minHeight: 172,
+    justifyContent: 'flex-start',
   },
   cardAtivo: {
     borderWidth: 1.5,

@@ -15,7 +15,7 @@ import {
 import MapView, { Marker, PROVIDER_GOOGLE, PROVIDER_DEFAULT } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { Feather } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GOOGLE_MAPS_API_KEY } from '../../config';
 
 // iOS: usa Apple Maps (não requer GoogleMaps CocoaPod instalado)
@@ -44,7 +44,8 @@ function formatarDistancia(km) {
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 const MapScreen = ({ navigation }) => {
-  const mapRef = useRef(null);
+  const mapRef  = useRef(null);
+  const insets  = useSafeAreaInsets();
 
   const [userLocation, setUserLocation]     = useState(null);
   const [pharmacies,   setPharmacies]       = useState([]);
@@ -54,6 +55,7 @@ const MapScreen = ({ navigation }) => {
   const [loading,      setLoading]          = useState(true);
   const [loadingMsg,   setLoadingMsg]       = useState('Obtendo localização…');
   const [error,        setError]            = useState(null);
+  const [safeTopH,     setSafeTopH]         = useState(120); // atualizado via onLayout
 
   // ── Busca farmácias na Places API ─────────────────────────────────────────
   const buscarFarmacias = useCallback(async (lat, lng) => {
@@ -216,8 +218,12 @@ const MapScreen = ({ navigation }) => {
         ))}
       </MapView>
 
-      {/* Botão voltar */}
-      <SafeAreaView edges={['top']} style={s.safeTop}>
+      {/* Botão voltar + busca */}
+      <SafeAreaView
+        edges={['top']}
+        style={s.safeTop}
+        onLayout={(e) => setSafeTopH(e.nativeEvent.layout.height)}
+      >
         <TouchableOpacity style={s.backBtn} onPress={() => navigation.goBack()}>
           <Feather name="arrow-left" size={22} color="#2E7D8A" />
         </TouchableOpacity>
@@ -241,13 +247,16 @@ const MapScreen = ({ navigation }) => {
         </View>
       </SafeAreaView>
 
-      {/* Botão recentrar */}
-      <TouchableOpacity style={s.recenterBtn} onPress={recentrar}>
+      {/* Botão recentrar — acima do painel inferior */}
+      <TouchableOpacity
+        style={[s.recenterBtn, { bottom: insets.bottom + 155 }]}
+        onPress={recentrar}
+      >
         <Feather name="navigation" size={20} color="#2E7D8A" />
       </TouchableOpacity>
 
-      {/* Contador de resultados */}
-      <View style={s.countBadge}>
+      {/* Contador de resultados — logo abaixo da search bar */}
+      <View style={[s.countBadge, { top: safeTopH + 8 }]}>
         <Text style={s.countText}>
           {filtered.length} farmácia{filtered.length !== 1 ? 's' : ''} encontrada{filtered.length !== 1 ? 's' : ''}
         </Text>
@@ -255,7 +264,7 @@ const MapScreen = ({ navigation }) => {
 
       {/* Card da farmácia selecionada */}
       {selected ? (
-        <View style={s.detailCard}>
+        <View style={[s.detailCard, { bottom: insets.bottom + 16 }]}>
           {/* Indicador aberto/fechado */}
           {selected.aberta !== null && (
             <View style={[s.statusBadge, selected.aberta ? s.aberta : s.fechada]}>
@@ -294,7 +303,7 @@ const MapScreen = ({ navigation }) => {
         </View>
       ) : (
         /* Lista compacta de farmácias próximas */
-        <View style={s.listContainer}>
+        <View style={[s.listContainer, { paddingBottom: insets.bottom + 20 }]}>
           <Text style={s.listTitle}>Farmácias próximas</Text>
           <FlatList
             data={filtered.slice(0, 8)}
@@ -372,11 +381,10 @@ const s = StyleSheet.create({
   },
   searchInput: { flex: 1, fontSize: 15, color: '#222' },
 
-  // Recentrar
+  // Recentrar — bottom definido dinamicamente via insets no JSX
   recenterBtn: {
     position: 'absolute',
     right: 16,
-    bottom: 210,
     backgroundColor: '#fff',
     borderRadius: 50,
     padding: 10,
@@ -387,22 +395,29 @@ const s = StyleSheet.create({
     shadowRadius: 4,
   },
 
-  // Contador
+  // Contador — top definido dinamicamente via safeTopH no JSX
   countBadge: {
     position: 'absolute',
-    top: 145,
     alignSelf: 'center',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+  countText: {
     backgroundColor: 'rgba(46,125,138,0.85)',
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 5,
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+    overflow: 'hidden',
   },
-  countText: { color: '#fff', fontSize: 12, fontWeight: '600' },
 
-  // Card de detalhe
+  // Card de detalhe — bottom definido dinamicamente via insets no JSX
   detailCard: {
     position: 'absolute',
-    bottom: 30,
     left: 16,
     right: 16,
     backgroundColor: '#fff',
@@ -446,17 +461,16 @@ const s = StyleSheet.create({
     padding: 10,
   },
 
-  // Lista horizontal
+  // Lista horizontal — paddingBottom definido dinamicamente via insets no JSX
   listContainer: {
     position: 'absolute',
-    bottom: 30,
+    bottom: 0,
     left: 0,
     right: 0,
     backgroundColor: 'rgba(255,255,255,0.97)',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingTop: 14,
-    paddingBottom: 20,
     elevation: 8,
     shadowColor: '#000',
     shadowOpacity: 0.15,

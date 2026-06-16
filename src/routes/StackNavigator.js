@@ -12,7 +12,6 @@ import AddMedScreen from '../pages/Medication/AddMedScreen';
 import MedicamentosScreen from '../pages/Medication/MedicamentosScreen';
 import MapScreen from '../pages/Map/MapScreen';
 import NotificationScreen from '../pages/Configuration/NotificationScreen';
-import AlarmScreen from '../pages/Configuration/AlarmScreen';
 import AvatarEditorScreen from '../pages/Avatar/AvatarEditorScreen';
 
 const Stack = createNativeStackNavigator();
@@ -40,7 +39,6 @@ const StackNavigator = () => {
           <Stack.Screen name="Home" component={HomeScreen} />
           <Stack.Screen name="Medicamentos" component={MedicamentosScreen} />
           <Stack.Screen name="AddMedScreen" component={AddMedScreen} />
-          <Stack.Screen name="AlarmScreen" component={AlarmScreen} />
           <Stack.Screen name="Notification" component={NotificationScreen} />
           <Stack.Screen name="Map" component={MapScreen} />
           <Stack.Screen name="Setting" component={SettingScreen} />

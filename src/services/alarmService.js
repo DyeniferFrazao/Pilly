@@ -74,7 +74,10 @@ export async function scheduleAlarms(
   const base   = new Date(selectedTime);
   const alarms = [];
 
-  for (let i = 1; i <= 4; i++) {
+  // Para intervalo de 24h gera apenas 1 alarme; caso contrário, 4 alarmes
+  const numAlarmes = interval === 24 ? 1 : 4;
+
+  for (let i = 1; i <= numAlarmes; i++) {
     const horario = new Date(base);
     horario.setHours(base.getHours() + interval * i);
 

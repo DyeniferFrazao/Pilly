@@ -1,10 +1,12 @@
 import { supabase } from '../lib/supabase';
-import { estaOnline } from '../lib/syncSecure';
 import {
   salvarMedicamentoLocal,
   buscarMedicamentosLocais,
   enfileirarSync,
 } from '../lib/localDb';
+// Sempre tenta online — Supabase lança erro se offline, o catch block trata
+const estaOnline = async () => true;
+
 // UUID simples para cache offline (o Supabase usa gen_random_uuid() quando online)
 function gerarId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
